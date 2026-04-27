@@ -570,7 +570,21 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   #v-reg .panel { max-width: 100%; }
   .rate-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
   .pocket-disp, .diezmo-disp { font-size: 1.1rem; padding: 7px; }
+
+  /* Botón resumen colapsable */
+  .resumen-toggle {
+    display: flex; width: 100%; padding: 6px 12px;
+    background: var(--s2); border: none; border-bottom: 1px solid var(--bd);
+    color: var(--muted); font-family: var(--font); font-size: .68rem;
+    font-weight: 700; cursor: pointer; text-align: left;
+    letter-spacing: .3px; align-items: center; gap: 6px;
+  }
+  .resumen-toggle:hover { color: var(--acc); }
+  .pat-bar.collapsed { display: none; }
 }
+
+/* Botón oculto en escritorio */
+.resumen-toggle { display: none; }
 </style>
 </head>
 <body onload="boot()">
@@ -593,8 +607,11 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </nav>
 
+<!-- BOTÓN RESUMEN MÓVIL -->
+<button class="resumen-toggle" id="resumen-toggle" onclick="toggleResumen()">▼ Resumen</button>
+
 <!-- PATRIMONIO BAR -->
-<div class="pat-bar">
+<div class="pat-bar" id="pat-bar">
   <div class="pat-group">
     <span class="pat-gtitle">MULTISERVICIOS RIVAS TECH · Empresa</span>
     <div class="pat-row">
@@ -1072,6 +1089,14 @@ function collectSaldos() {
   saldos['tc-eur']     = document.getElementById('tc-eur').value;
   saldos['pocket-val'] = document.getElementById('pocket-val').value;
   return saldos;
+}
+
+/* ═══ RESUMEN MÓVIL ═══ */
+function toggleResumen() {
+  const bar = document.getElementById('pat-bar');
+  const btn = document.getElementById('resumen-toggle');
+  const collapsed = bar.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '▶ Resumen' : '▼ Resumen';
 }
 
 /* ═══ INIT ═══ */
