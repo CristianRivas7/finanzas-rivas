@@ -527,34 +527,231 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 .gas-status.ok { color: var(--green); border-color: #0a3a1a; }
 .gas-status.err { color: var(--red); border-color: #3d0a0a; }
 
+/* ── INVENTARIO ── */
+#v-inv.active { display: flex; flex-direction: column; }
+.inv-wrap { flex: 1; min-height: 0; overflow-y: auto; padding: 12px; }
+.inv-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 8px; padding: 10px 13px; margin-bottom: 10px;
+}
+.inv-toolbar .fi { flex: 1; min-width: 100px; }
+.inv-stats {
+  display: grid; grid-template-columns: repeat(4,1fr); gap: 8px;
+  margin-bottom: 12px;
+}
+.inv-stat {
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 8px; padding: 10px 13px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.inv-stat-label { font-size: .6rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; }
+.inv-stat-val   { font-family: var(--mono); font-size: 1.05rem; }
+
+/* Form agregar ítem */
+.inv-form {
+  background: var(--s2); border: 1px solid var(--bd);
+  border-top: 3px solid var(--acc);
+  border-radius: 8px; padding: 13px; margin-bottom: 12px;
+}
+.inv-form-title {
+  font-size: .65rem; font-weight: 800; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .5px;
+  border-left: 3px solid var(--acc); padding-left: 7px; margin-bottom: 10px;
+}
+.inv-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr auto; gap: 7px; align-items: end; margin-bottom: 7px; }
+.inv-row2 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 7px; margin-bottom: 7px; }
+.inv-field { display: flex; flex-direction: column; gap: 3px; }
+.inv-field label { font-size: .6rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .3px; }
+
+/* Tabla de inventario */
+.inv-table {
+  width: 100%; border-collapse: collapse;
+  background: var(--s1); border: 1px solid var(--bd);
+  border-radius: 8px; overflow: hidden; font-size: .78rem;
+}
+.inv-table th {
+  background: var(--s2); color: var(--muted); padding: 8px 10px;
+  text-align: left; font-size: .62rem; font-weight: 700;
+  letter-spacing: .3px; text-transform: uppercase;
+  border-bottom: 1px solid var(--bd); white-space: nowrap;
+}
+.inv-table td { padding: 8px 10px; border-bottom: 1px solid var(--bd); vertical-align: middle; }
+.inv-table tr:last-child td { border-bottom: none; }
+.inv-table tr:hover td { background: var(--s2); }
+.inv-table tr.alerta-bajo td { background: rgba(255,71,87,.05); }
+.inv-table tr.alerta-bajo td:first-child { border-left: 3px solid var(--red); }
+
+/* badges de estado / tipo */
+.inv-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: .58rem; font-weight: 800; letter-spacing: .3px; text-transform: uppercase; white-space: nowrap;
+}
+.ib-mat     { background: var(--blue-bg);  color: var(--blue);    border: 1px solid #0a2540; }
+.ib-herr    { background: var(--amb-bg);   color: var(--amber);   border: 1px solid #3d2a00; }
+.ib-ok      { background: var(--grn-bg);   color: var(--green);   border: 1px solid #0a3a1a; }
+.ib-uso     { background: var(--blue-bg);  color: var(--blue);    border: 1px solid #0a2540; }
+.ib-dañado  { background: var(--red-bg);   color: var(--red);     border: 1px solid #3d0a0a; }
+.ib-bajo    { background: var(--red-bg);   color: var(--red);     border: 1px solid #3d0a0a; font-size: .55rem; padding: 1px 6px; margin-left: 4px; }
+
+/* Botones de acción en tabla */
+.inv-act { display: flex; gap: 4px; }
+.inv-btn {
+  padding: 3px 8px; border-radius: 5px; font-size: .62rem;
+  font-family: var(--font); font-weight: 700; cursor: pointer; border: 1px solid var(--bd2);
+  background: var(--s3); color: var(--muted); transition: all .12s; white-space: nowrap;
+}
+.inv-btn:hover { border-color: var(--acc); color: var(--acc); }
+.inv-btn.red:hover { border-color: var(--red); color: var(--red); }
+.inv-btn.use { border-color: #0a2540; color: var(--blue); background: var(--blue-bg); }
+.inv-btn.use:hover { border-color: var(--blue); }
+
+/* Modal inventario */
+.inv-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.75);
+  z-index: 600; display: none; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.inv-modal-overlay.open { display: flex; }
+.inv-modal {
+  background: var(--s2); border: 1px solid var(--bd2);
+  border-radius: 12px; padding: 22px; width: 400px; max-width: 94vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,.7); animation: mIn .18s ease;
+}
+.inv-modal h3 { font-size: .88rem; font-weight: 800; margin-bottom: 14px; color: var(--text); }
+.inv-modal .modal-btns { display: flex; gap: 8px; margin-top: 14px; }
+
+/* Alerta badge flotante */
+.alerta-count {
+  display: none; background: var(--red); color: #fff;
+  font-size: .55rem; font-weight: 800; padding: 1px 5px;
+  border-radius: 10px; margin-left: 4px; vertical-align: middle;
+}
+.alerta-count.show { display: inline-block; }
+
+@media (max-width: 768px) {
+  .inv-stats { grid-template-columns: repeat(2, 1fr); }
+  .inv-row  { grid-template-columns: 1fr 1fr; }
+  .inv-row2 { grid-template-columns: 1fr 1fr; }
+  .inv-table th:nth-child(6),
+  .inv-table td:nth-child(6) { display: none; }
+  .inv-table th:nth-child(7),
+  .inv-table td:nth-child(7) { display: none; }
+}
+
+.pat-toggle {
+  display: none;
+  width: 100%;
+  background: var(--s2);
+  border: none;
+  border-bottom: 1px solid var(--bd);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: .65rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  cursor: pointer;
+  text-align: left;
+  letter-spacing: .3px;
+  flex-shrink: 0;
+  transition: color .15s;
+  display: none;
+  align-items: center;
+  gap: 6px;
+}
+.pat-toggle:hover { color: var(--acc); }
+.pat-toggle-arrow { font-size: .7rem; transition: transform .2s; }
+.pat-toggle.open .pat-toggle-arrow { transform: rotate(180deg); }
+
 /* ── MÓVIL ── */
 @media (max-width: 768px) {
-  nav { padding: 0 10px; gap: 6px; flex-wrap: wrap; min-height: 44px; }
-  .logo { font-size: .65rem; }
-  .logo-badge { width: 22px; height: 22px; font-size: .65rem; }
-  .nav-tabs { gap: 2px; flex-wrap: wrap; }
-  .tab-btn { padding: 4px 8px; font-size: .62rem; }
-  .gas-status { font-size: .55rem; padding: 3px 6px; }
+  /* NAV: una sola fila compacta, sin wrap */
+  nav {
+    padding: 0 8px;
+    gap: 0;
+    flex-wrap: nowrap;
+    min-height: 42px;
+    height: 42px;
+    overflow: hidden;
+  }
+  .logo {
+    font-size: 0;        /* ocultar texto, solo icono */
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+  .logo-badge { width: 24px; height: 24px; font-size: .7rem; }
+  .nav-tabs { gap: 2px; flex-wrap: nowrap; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .tab-btn { padding: 5px 9px; font-size: .63rem; white-space: nowrap; flex-shrink: 0; }
+  .nav-right { gap: 5px; flex-shrink: 0; }
+  .gas-status { font-size: .5rem; padding: 3px 5px; }
+  .rate-pill { font-size: .58rem; padding: 4px 7px; }
 
-  .pat-bar { padding: 5px 10px; flex-wrap: wrap; gap: 5px; }
-  .pat-row { gap: 5px; }
-  .pat-chip { font-size: .72rem; }
+  /* PAT-BAR: colapsable en móvil */
+  .pat-toggle { display: flex !important; }
 
+  .pat-bar {
+    padding: 0;
+    flex-wrap: wrap;
+    gap: 0;
+    min-height: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .25s ease, padding .25s ease;
+    border-bottom: none;
+  }
+  .pat-bar.expanded {
+    max-height: 300px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--bd);
+    gap: 5px;
+  }
+
+  /* Dentro del pat-bar expandido: layout compacto en 2 columnas */
+  .pat-bar.expanded .pat-group {
+    padding: 3px 8px;
+    border-right: none;
+    border-bottom: 1px solid var(--bd);
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+  .pat-bar.expanded .pat-gtitle { min-width: 120px; font-size: .55rem; }
+  .pat-bar.expanded .pat-row { flex-wrap: nowrap; gap: 8px; }
+  .pat-bar.expanded .pat-chip .pat-cval { font-size: .78rem; }
+  .pat-bar.expanded .pat-right {
+    margin-left: 0;
+    padding-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 4px 0;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .top-btn { font-size: .62rem; padding: 4px 9px; }
+
+  /* CAJAS: columna única */
   .cajas-wrap {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 8px;
     height: auto;
   }
-  .col { min-height: 200px; max-height: 320px; }
+  .col { min-height: 180px; max-height: 300px; }
 
-  .panel { gap: 6px; padding: 6px; }
-  .psec { padding: 9px; }
+  /* PANEL / CAJA DE REGISTRO */
+  .panel { gap: 5px; padding: 6px; }
+  .psec { padding: 8px; }
   .pi { padding: 5px 8px; font-size: .78rem; margin-bottom: 5px; }
   .pi-row { gap: 5px; }
   .tbtn { padding: 6px; font-size: .65rem; }
   .btn-save { padding: 9px; font-size: .72rem; }
 
+  /* Select del banco: texto truncado */
+  #reg-banco { max-width: 100%; text-overflow: ellipsis; }
+
+  /* HISTORIAL */
   .hist-wrap { padding: 8px; }
   .hist-totals { flex-wrap: wrap; gap: 6px; }
   .hw { padding: 9px 11px; }
@@ -563,28 +760,16 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   .fi { font-size: .72rem; min-width: 70px; }
   .htable th, .htable td { padding: 5px 7px; font-size: .7rem; }
 
+  /* CALENDARIO */
   .cal-head h1 { font-size: .8rem; min-width: 160px; }
   .cal-day { min-height: 52px; font-size: .65rem; }
 
-  /* Registro diario más compacto */
+  /* REGISTRO DIARIO */
   #v-reg .panel { max-width: 100%; }
+  .reg-grid { grid-template-columns: 1fr; gap: 8px; padding: 8px; }
   .rate-grid { grid-template-columns: 1fr 1fr; gap: 6px; }
   .pocket-disp, .diezmo-disp { font-size: 1.1rem; padding: 7px; }
-
-  /* Botón resumen colapsable */
-  .resumen-toggle {
-    display: flex !important; width: 100%; padding: 6px 12px;
-    background: var(--s2); border: none; border-bottom: 1px solid var(--bd);
-    color: var(--muted); font-family: var(--font); font-size: .68rem;
-    font-weight: 700; cursor: pointer; text-align: left;
-    letter-spacing: .3px; align-items: center; gap: 6px;
-  }
-  .resumen-toggle:hover { color: var(--acc); }
-  .pat-bar.collapsed { display: none; }
 }
-
-/* Botón oculto en escritorio */
-.resumen-toggle { display: none; }
 </style>
 </head>
 <body onload="boot()">
@@ -598,6 +783,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <button class="tab-btn active" onclick="tab('view-main',this)">Cajas</button>
     <button class="tab-btn" onclick="tab('view-history',this)">Historial</button>
     <button class="tab-btn" onclick="tab('v-cal',this)">Calendario</button>
+    <button class="tab-btn" onclick="tab('v-inv',this)">📦 Inventario</button>
   </div>
   <div class="nav-right">
     <span class="gas-status" id="gas-status">⚡ GAS: —</span>
@@ -607,8 +793,11 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </nav>
 
-<!-- BOTÓN RESUMEN MÓVIL -->
-<button class="resumen-toggle" id="resumen-toggle" onclick="toggleResumen()">▼ Resumen</button>
+<!-- TOGGLE PATRIMONIO (solo móvil) -->
+<button class="pat-toggle" id="pat-toggle-btn" onclick="togglePatBar()">
+  <span>📊 MULTISERVICIOS RIVAS TECH · LPS <span id="nb-pe-lps-tog">450.00</span> &nbsp;|&nbsp; CRISTIAN · L<span id="nb-pp-lps-tog">0.00</span></span>
+  <span class="pat-toggle-arrow" style="margin-left:auto">▼</span>
+</button>
 
 <!-- PATRIMONIO BAR -->
 <div class="pat-bar" id="pat-bar">
@@ -966,7 +1155,170 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- ═══════════ INVENTARIO ═══════════ -->
+<div id="v-inv" class="view">
+  <div class="inv-wrap">
+
+    <!-- Stats rápidos -->
+    <div class="inv-stats">
+      <div class="inv-stat">
+        <span class="inv-stat-label">Total Ítems</span>
+        <span class="inv-stat-val" id="inv-total" style="color:var(--blue)">0</span>
+      </div>
+      <div class="inv-stat">
+        <span class="inv-stat-label">Valor Stock</span>
+        <span class="inv-stat-val" id="inv-valor" style="color:var(--lps-fg)">L 0.00</span>
+      </div>
+      <div class="inv-stat">
+        <span class="inv-stat-label">Stock Bajo</span>
+        <span class="inv-stat-val" id="inv-bajo" style="color:var(--red)">0</span>
+      </div>
+      <div class="inv-stat">
+        <span class="inv-stat-label">Herramientas</span>
+        <span class="inv-stat-val" id="inv-herr" style="color:var(--amber)">0</span>
+      </div>
+    </div>
+
+    <!-- Formulario agregar -->
+    <div class="inv-form" id="inv-form-wrap">
+      <div class="inv-form-title" id="inv-form-title">Agregar Ítem al Inventario</div>
+      <div class="inv-row">
+        <div class="inv-field">
+          <label>Nombre / Descripción *</label>
+          <input type="text" id="inv-nombre" class="pi" placeholder="Ej: Pantalla iPhone 13" style="margin:0">
+        </div>
+        <div class="inv-field">
+          <label>Tipo</label>
+          <select id="inv-tipo" class="pi" style="margin:0">
+            <option value="material">🔩 Material/Repuesto</option>
+            <option value="herramienta">🔧 Herramienta</option>
+          </select>
+        </div>
+        <div class="inv-field">
+          <label>Cantidad</label>
+          <input type="number" id="inv-qty" class="pi" placeholder="0" min="0" style="margin:0" oninput="invPrevStock()">
+        </div>
+        <div class="inv-field">
+          <label>Stock Mín. Alerta</label>
+          <input type="number" id="inv-minstock" class="pi" placeholder="1" min="0" style="margin:0">
+        </div>
+        <div class="inv-field">
+          <label>Estado (herramienta)</label>
+          <select id="inv-estado" class="pi" style="margin:0">
+            <option value="disponible">✅ Disponible</option>
+            <option value="en-uso">🔄 En uso</option>
+            <option value="dañado">⚠ Dañado</option>
+          </select>
+        </div>
+        <div class="inv-field" style="justify-content:flex-end">
+          <button class="btn-save" id="inv-save-btn" onclick="invGuardar()" style="margin:0;padding:8px 14px;font-size:.7rem;width:auto">Guardar</button>
+        </div>
+      </div>
+      <div class="inv-row2">
+        <div class="inv-field">
+          <label>Costo Unitario (Lps)</label>
+          <input type="number" id="inv-costo" class="pi" placeholder="0.00" min="0" step="0.01" style="margin:0">
+        </div>
+        <div class="inv-field">
+          <label>Precio Venta (Lps)</label>
+          <input type="number" id="inv-precio" class="pi" placeholder="0.00" min="0" step="0.01" style="margin:0">
+        </div>
+        <div class="inv-field">
+          <label>Categoría</label>
+          <select id="inv-cat" class="pi" style="margin:0">
+            <option value="">— Sin categoría —</option>
+            <option value="Pantallas">Pantallas</option>
+            <option value="Baterías">Baterías</option>
+            <option value="Conectores">Conectores</option>
+            <option value="Carcasas">Carcasas</option>
+            <option value="Cables">Cables</option>
+            <option value="Electrónica">Electrónica</option>
+            <option value="Herramienta general">Herramienta general</option>
+            <option value="Herramienta eléctrica">Herramienta eléctrica</option>
+            <option value="Otros">Otros</option>
+          </select>
+        </div>
+        <div class="inv-field">
+          <label>Proveedor / Nota</label>
+          <input type="text" id="inv-nota" class="pi" placeholder="Ej: Mercado La Isla" style="margin:0">
+        </div>
+      </div>
+      <button class="btn-flimpiar" onclick="invCancelarEdicion()" id="inv-cancel-btn" style="display:none;margin-top:4px">✕ Cancelar edición</button>
+    </div>
+
+    <!-- Barra de búsqueda y filtros -->
+    <div class="inv-toolbar">
+      <span class="flabel">Filtrar</span>
+      <input type="text" id="inv-buscar" class="fi" placeholder="Buscar nombre..." oninput="invRender()">
+      <select id="inv-ftipo" class="fi" style="max-width:160px" onchange="invRender()">
+        <option value="">Todos los tipos</option>
+        <option value="material">Materiales/Repuestos</option>
+        <option value="herramienta">Herramientas</option>
+      </select>
+      <select id="inv-fcat" class="fi" style="max-width:160px" onchange="invRender()">
+        <option value="">Todas las categorías</option>
+      </select>
+      <select id="inv-fbajo" class="fi" style="max-width:160px" onchange="invRender()">
+        <option value="">Todo el stock</option>
+        <option value="bajo">⚠ Solo stock bajo</option>
+      </select>
+      <button class="btn-flimpiar" onclick="invLimpiarFiltros()">Limpiar</button>
+    </div>
+
+    <!-- Tabla -->
+    <table class="inv-table">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Tipo</th>
+          <th>Categoría</th>
+          <th style="text-align:center">Qty</th>
+          <th>Estado</th>
+          <th>Costo Unit.</th>
+          <th>Precio Venta</th>
+          <th>Proveedor</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="inv-tbody">
+        <tr><td colspan="9" style="text-align:center;color:var(--dim);padding:28px;font-size:.8rem">Sin ítems en inventario — agrega el primero arriba ↑</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+</div>
+
+<!-- Modal usar material desde inventario -->
+<div class="inv-modal-overlay" id="inv-use-modal" onclick="if(event.target===this)invCloseUse()">
+  <div class="inv-modal">
+    <h3 id="inv-use-title">Usar Material</h3>
+    <p style="font-size:.75rem;color:var(--muted);margin-bottom:12px">Esto descontará del stock y puede registrar el costo como egreso.</p>
+    <div class="inv-field" style="margin-bottom:8px">
+      <label>Cantidad a usar</label>
+      <input type="number" id="inv-use-qty" class="pi" value="1" min="1">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <input type="checkbox" id="inv-use-reg" style="accent-color:var(--acc);width:15px;height:15px">
+      <label for="inv-use-reg" style="font-size:.74rem;color:var(--text2);cursor:pointer">Registrar como egreso en Caja de Registro</label>
+    </div>
+    <div id="inv-use-reg-opts" style="display:none">
+      <select id="inv-use-banco" class="pi" style="margin-bottom:6px;font-size:.72rem">
+        <option value="mi-caja-lps">Caja Chica</option>
+        <option value="mi-occ-chq">Occidente Negocio — Cheques Lps</option>
+        <option value="mi-ban-lps">Banpais Negocio — Lempiras</option>
+        <option value="mi-fic-lps">Ficohsa Negocio — Lempiras</option>
+      </select>
+      <input type="text" id="inv-use-desc" class="pi" placeholder="Descripción del egreso">
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="invCloseUse()">Cancelar</button>
+      <button class="mbtn-ok" onclick="invConfirmarUso()">Confirmar uso</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TASAS -->
+
 <div class="overlay" id="modal-tasas" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <h3>Editar Tasas de Cambio</h3>
@@ -994,7 +1346,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbyjuBmKLT_E4hz2ko6CYynlqaVj_BfgyL-3pWCYjv9wS-7r55WgNeMszX2_ham4TNWTAg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbykKgG5IX6dlnFV4phyTdq6c5MC2qScS_DvPRKvs-TtBdkW1OBRokGX5cXcuUyyN6w76w/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -1091,19 +1443,12 @@ function collectSaldos() {
   return saldos;
 }
 
-/* ═══ RESUMEN MÓVIL ═══ */
-function toggleResumen() {
-  const bar = document.getElementById('pat-bar');
-  const btn = document.getElementById('resumen-toggle');
-  const collapsed = bar.classList.toggle('collapsed');
-  btn.textContent = collapsed ? '▶ Resumen' : '▼ Resumen';
-}
-
 /* ═══ INIT ═══ */
 function boot() {
   workDate = hoyKey();
   loadAll();
-  loadFromGAS(); // Intenta cargar desde GAS al iniciar
+  invInit();
+  loadFromGAS();
   renderCal();
   const jumpEl = document.getElementById('jump');
   if (jumpEl) jumpEl.value = workDate;
@@ -1119,6 +1464,7 @@ function tab(id, btn) {
   if (id === 'view-history') renderHistorial();
   if (id === 'v-cal')        renderCal();
   if (id === 'v-reg')        renderReg();
+  if (id === 'v-inv')        invRender();
 }
 
 /* ═══ TASAS ═══ */
@@ -1141,6 +1487,23 @@ function applyRates() {
   document.getElementById('tc-eur').value = document.getElementById('m-eur').value;
   syncBadge(); calcular(); saveAll(); closeModal();
   toast('Tasas actualizadas ✓');
+}
+
+/* ═══ COLOR SALDO (rojo si sobregiro) ═══ */
+function actualizarColorSaldo(el) {
+  if (!el) return;
+  const v = parseFloat(el.value) || 0;
+  const m = el.getAttribute('data-m');
+  if (v < 0) {
+    el.style.setProperty('background', 'var(--red-bg)', 'important');
+    el.style.setProperty('color',      'var(--red)',    'important');
+    el.style.setProperty('border-color','#7a1a1a',      'important');
+  } else {
+    /* restaurar color original según moneda */
+    el.style.removeProperty('background');
+    el.style.removeProperty('color');
+    el.style.removeProperty('border-color');
+  }
 }
 
 /* ═══ CALCULAR ═══ */
@@ -1171,6 +1534,7 @@ function calcular() {
       if      (m === 'USD') eqEl.textContent = 'L ' + fmt(val * tU);
       else if (m === 'EUR') eqEl.textContent = 'L ' + fmt(val * tE);
     }
+    actualizarColorSaldo(el);
   });
 
   document.getElementById('t-mi-lps').textContent = fmt(miLps);
@@ -1190,6 +1554,12 @@ function calcular() {
 
   document.getElementById('p-diezmo').textContent = fmt(diezmoTotal);
   document.getElementById('diezmo-val').value = fmt(diezmoTotal);
+
+  /* Actualizar resumen en el toggle de móvil */
+  const togLps = document.getElementById('nb-pe-lps-tog');
+  const togPp  = document.getElementById('nb-pp-lps-tog');
+  if (togLps) togLps.textContent = fmt(miLps);
+  if (togPp)  togPp.textContent  = fmt(mnLps);
 }
 
 /* ═══ TIPO ═══ */
@@ -1316,11 +1686,16 @@ function guardar() {
   if (!inputEl) { toast('Cuenta no encontrada', 'err'); return; }
 
   const curr = parseFloat(inputEl.value) || 0;
-  if (currentType === 'OUT' && neto > curr) {
-    toast('Saldo insuficiente en esa cuenta', 'err'); return;
+  const nuevoSaldo = currentType === 'IN' ? curr + neto : curr - neto;
+
+  /* ── SOBREGIRO: permitido, pero avisa y pinta en rojo ── */
+  if (currentType === 'OUT' && nuevoSaldo < 0) {
+    toast(`⚠ Sobregiro: saldo quedará en L ${fmt(nuevoSaldo)}`, 'warn');
   }
 
-  inputEl.value = (currentType === 'IN' ? curr + neto : curr - neto).toFixed(2);
+  inputEl.value = nuevoSaldo.toFixed(2);
+  /* Colorear la celda según positivo/negativo */
+  actualizarColorSaldo(inputEl);
 
   /* ─── DIEZMO 20% (sobre ganancia si hay costo, o sobre neto si no) ─── */
   let diezmoApartado = 0;
@@ -1566,6 +1941,7 @@ function saveAll() {
   localStorage.setItem('cr_pro', JSON.stringify({registros, state}));
   localStorage.setItem('cr_sdata', JSON.stringify(sData));
   localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial}));
+  invSave();
 }
 
 function loadAll() {
@@ -1790,6 +2166,361 @@ function delS(tipo, i) {
     sData[workDate][tipo].splice(i, 1);
   }
   saveS();
+}
+
+/* ═══ PAT-BAR TOGGLE (móvil) ═══ */
+function togglePatBar() {
+  const bar = document.getElementById('pat-bar');
+  const btn = document.getElementById('pat-toggle-btn');
+  if (!bar || !btn) return;
+  const isOpen = bar.classList.contains('expanded');
+  bar.classList.toggle('expanded', !isOpen);
+  btn.classList.toggle('open', !isOpen);
+}
+
+/* ══════════════════════════════════════════════════
+   INVENTARIO — ESTADO Y FUNCIONES COMPLETAS
+   ══════════════════════════════════════════════════ */
+let inventario = [];          // Array de ítems
+let invEditId  = null;        // ID del ítem que se está editando
+let invUseId   = null;        // ID del ítem que se va a usar
+
+/* ── helpers ── */
+function invSave() {
+  localStorage.setItem('cr_inventario', JSON.stringify(inventario));
+}
+function invLoad() {
+  inventario = JSON.parse(localStorage.getItem('cr_inventario') || '[]');
+}
+
+/* ── Stats ── */
+function invStats() {
+  const total = inventario.length;
+  const valor = inventario.reduce((a, x) => a + (x.costo || 0) * (x.qty || 0), 0);
+  const bajo  = inventario.filter(x => x.tipo === 'material' && (x.qty || 0) <= (x.minstock || 1)).length;
+  const herr  = inventario.filter(x => x.tipo === 'herramienta').length;
+
+  document.getElementById('inv-total').textContent = total;
+  document.getElementById('inv-valor').textContent = 'L ' + fmt(valor);
+  document.getElementById('inv-bajo').textContent  = bajo;
+  document.getElementById('inv-herr').textContent  = herr;
+
+  /* Badge en el tab */
+  let badge = document.getElementById('inv-badge');
+  if (!badge) {
+    const tabBtn = document.querySelector('[onclick*="v-inv"]');
+    if (tabBtn) {
+      badge = document.createElement('span');
+      badge.id = 'inv-badge';
+      badge.className = 'alerta-count';
+      tabBtn.appendChild(badge);
+    }
+  }
+  if (badge) {
+    badge.textContent = bajo;
+    badge.classList.toggle('show', bajo > 0);
+  }
+
+  /* Actualizar filtro de categorías */
+  invBuildCatFilter();
+}
+
+/* ── Filtro categorías dinámico ── */
+function invBuildCatFilter() {
+  const sel = document.getElementById('inv-fcat');
+  if (!sel) return;
+  const cats = [...new Set(inventario.map(x => x.cat).filter(Boolean))].sort();
+  const cur  = sel.value;
+  sel.innerHTML = '<option value="">Todas las categorías</option>' +
+    cats.map(c => `<option value="${c}"${c===cur?' selected':''}>${c}</option>`).join('');
+}
+
+/* ── Render tabla ── */
+function invRender() {
+  const buscar = (document.getElementById('inv-buscar')?.value || '').toLowerCase();
+  const ftipo  = document.getElementById('inv-ftipo')?.value || '';
+  const fcat   = document.getElementById('inv-fcat')?.value  || '';
+  const fbajo  = document.getElementById('inv-fbajo')?.value || '';
+
+  const lista = inventario.filter(x => {
+    if (ftipo  && x.tipo !== ftipo)  return false;
+    if (fcat   && x.cat  !== fcat)   return false;
+    if (buscar && !x.nombre.toLowerCase().includes(buscar)) return false;
+    if (fbajo === 'bajo' && x.tipo === 'material' && (x.qty||0) > (x.minstock||1)) return false;
+    return true;
+  });
+
+  const tbody = document.getElementById('inv-tbody');
+  if (!lista.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--dim);padding:28px;font-size:.8rem">
+      ${inventario.length ? 'Sin resultados — ajusta los filtros' : 'Sin ítems en inventario — agrega el primero arriba ↑'}
+    </td></tr>`;
+    invStats();
+    return;
+  }
+
+  tbody.innerHTML = lista.map(x => {
+    const esBajo  = x.tipo === 'material' && (x.qty||0) <= (x.minstock||1);
+    const tipoBadge = x.tipo === 'material'
+      ? `<span class="inv-badge ib-mat">🔩 Material</span>`
+      : `<span class="inv-badge ib-herr">🔧 Herramienta</span>`;
+
+    let estadoBadge = '';
+    if (x.tipo === 'herramienta') {
+      const cls = x.estado === 'en-uso' ? 'ib-uso' : x.estado === 'dañado' ? 'ib-dañado' : 'ib-ok';
+      const lbl = x.estado === 'en-uso' ? '🔄 En uso' : x.estado === 'dañado' ? '⚠ Dañado' : '✅ Disponible';
+      estadoBadge = `<span class="inv-badge ${cls}">${lbl}</span>`;
+    } else {
+      estadoBadge = `<span style="font-family:var(--mono);color:${esBajo?'var(--red)':'var(--acc)'}">
+        ${x.qty||0}
+        ${esBajo ? `<span class="inv-badge ib-bajo">⚠ BAJO</span>` : ''}
+      </span>`;
+    }
+
+    const qtyCol = x.tipo === 'herramienta'
+      ? `<td style="text-align:center;color:var(--muted)">—</td>`
+      : `<td style="text-align:center">${estadoBadge}</td>`;
+    const estadoCol = x.tipo === 'herramienta'
+      ? `<td>${estadoBadge}</td>`
+      : `<td><span style="color:var(--dim);font-size:.7rem">—</span></td>`;
+
+    const costoStr  = x.costo  > 0 ? `<span style="color:var(--lps-fg);font-family:var(--mono)">L ${fmt(x.costo)}</span>`  : '<span style="color:var(--dim)">—</span>';
+    const precioStr = x.precio > 0 ? `<span style="color:var(--green);font-family:var(--mono)">L ${fmt(x.precio)}</span>` : '<span style="color:var(--dim)">—</span>';
+
+    const usarBtn = x.tipo === 'material'
+      ? `<button class="inv-btn use" onclick="invAbrirUso('${x.id}')">▼ Usar</button>`
+      : `<button class="inv-btn use" onclick="invCambiarEstado('${x.id}')" title="Cambiar estado">↻ Estado</button>`;
+
+    return `<tr class="${esBajo ? 'alerta-bajo' : ''}">
+      <td style="color:var(--text);font-weight:600">${x.nombre}<br>
+        <span style="color:var(--muted);font-size:.65rem">${x.cat || ''}</span></td>
+      <td>${tipoBadge}</td>
+      <td style="color:var(--muted);font-size:.73rem">${x.cat || '—'}</td>
+      ${qtyCol}
+      ${estadoCol}
+      <td>${costoStr}</td>
+      <td>${precioStr}</td>
+      <td style="color:var(--muted);font-size:.73rem;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.nota || '—'}</td>
+      <td>
+        <div class="inv-act">
+          ${usarBtn}
+          <button class="inv-btn" onclick="invEditar('${x.id}')">✏</button>
+          <button class="inv-btn red" onclick="invEliminar('${x.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+
+  invStats();
+}
+
+/* ── Preview cantidad al tipear ── */
+function invPrevStock() { /* sin acción por ahora, hook para futuro */ }
+
+/* ── Limpiar filtros inventario ── */
+function invLimpiarFiltros() {
+  ['inv-buscar','inv-ftipo','inv-fcat','inv-fbajo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  invRender();
+}
+
+/* ── Guardar (nuevo o edición) ── */
+function invGuardar() {
+  const nombre = document.getElementById('inv-nombre').value.trim();
+  if (!nombre) { toast('Escribe el nombre del ítem', 'err'); return; }
+
+  const tipo     = document.getElementById('inv-tipo').value;
+  const qty      = parseInt(document.getElementById('inv-qty').value)      || 0;
+  const minstock = parseInt(document.getElementById('inv-minstock').value) || 1;
+  const estado   = document.getElementById('inv-estado').value;
+  const costo    = parseFloat(document.getElementById('inv-costo').value)  || 0;
+  const precio   = parseFloat(document.getElementById('inv-precio').value) || 0;
+  const cat      = document.getElementById('inv-cat').value;
+  const nota     = document.getElementById('inv-nota').value.trim();
+
+  if (invEditId) {
+    /* Edición */
+    const idx = inventario.findIndex(x => x.id === invEditId);
+    if (idx > -1) {
+      inventario[idx] = { ...inventario[idx], nombre, tipo, qty, minstock, estado, costo, precio, cat, nota };
+    }
+    toast('Ítem actualizado ✓');
+  } else {
+    /* Nuevo */
+    inventario.unshift({ id: 'inv_' + Date.now(), nombre, tipo, qty, minstock, estado, costo, precio, cat, nota });
+    toast('Ítem agregado al inventario ✓');
+  }
+
+  invSave();
+  invRender();
+  invLimpiarForm();
+}
+
+/* ── Limpiar formulario ── */
+function invLimpiarForm() {
+  ['inv-nombre','inv-qty','inv-minstock','inv-costo','inv-precio','inv-nota'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('inv-tipo').value   = 'material';
+  document.getElementById('inv-estado').value = 'disponible';
+  document.getElementById('inv-cat').value    = '';
+  document.getElementById('inv-form-title').textContent = 'Agregar Ítem al Inventario';
+  document.getElementById('inv-save-btn').textContent   = 'Guardar';
+  document.getElementById('inv-cancel-btn').style.display = 'none';
+  invEditId = null;
+}
+
+/* ── Cancelar edición ── */
+function invCancelarEdicion() { invLimpiarForm(); }
+
+/* ── Editar ítem ── */
+function invEditar(id) {
+  const x = inventario.find(i => i.id === id);
+  if (!x) return;
+  invEditId = id;
+  document.getElementById('inv-nombre').value   = x.nombre;
+  document.getElementById('inv-tipo').value     = x.tipo;
+  document.getElementById('inv-qty').value      = x.qty    || 0;
+  document.getElementById('inv-minstock').value = x.minstock || 1;
+  document.getElementById('inv-estado').value   = x.estado || 'disponible';
+  document.getElementById('inv-costo').value    = x.costo  || '';
+  document.getElementById('inv-precio').value   = x.precio || '';
+  document.getElementById('inv-cat').value      = x.cat    || '';
+  document.getElementById('inv-nota').value     = x.nota   || '';
+  document.getElementById('inv-form-title').textContent = `Editando: ${x.nombre}`;
+  document.getElementById('inv-save-btn').textContent   = 'Guardar cambios';
+  document.getElementById('inv-cancel-btn').style.display = 'inline-block';
+  /* Scroll arriba para ver el form */
+  document.getElementById('inv-form-wrap').scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── Eliminar ítem ── */
+function invEliminar(id) {
+  const x = inventario.find(i => i.id === id);
+  if (!x) return;
+  if (!confirm(`¿Eliminar "${x.nombre}" del inventario?`)) return;
+  inventario = inventario.filter(i => i.id !== id);
+  invSave();
+  invRender();
+  toast('Ítem eliminado');
+}
+
+/* ── Cambiar estado herramienta (ciclo) ── */
+function invCambiarEstado(id) {
+  const x = inventario.find(i => i.id === id);
+  if (!x) return;
+  const ciclo = { 'disponible': 'en-uso', 'en-uso': 'dañado', 'dañado': 'disponible' };
+  x.estado = ciclo[x.estado] || 'disponible';
+  invSave();
+  invRender();
+  const lbl = { 'disponible':'✅ Disponible', 'en-uso':'🔄 En uso', 'dañado':'⚠ Dañado' };
+  toast(`${x.nombre} → ${lbl[x.estado]}`);
+}
+
+/* ── Abrir modal "usar material" ── */
+function invAbrirUso(id) {
+  invUseId = id;
+  const x  = inventario.find(i => i.id === id);
+  if (!x) return;
+  document.getElementById('inv-use-title').textContent = `Usar: ${x.nombre} (stock: ${x.qty||0})`;
+  document.getElementById('inv-use-qty').value = 1;
+  document.getElementById('inv-use-reg').checked = false;
+  document.getElementById('inv-use-reg-opts').style.display = 'none';
+  document.getElementById('inv-use-desc').value = `Uso de ${x.nombre}`;
+  /* Mostrar/ocultar opciones de registro al activar checkbox */
+  document.getElementById('inv-use-reg').onchange = function() {
+    document.getElementById('inv-use-reg-opts').style.display = this.checked ? 'block' : 'none';
+  };
+  document.getElementById('inv-use-modal').classList.add('open');
+}
+
+function invCloseUse() {
+  document.getElementById('inv-use-modal').classList.remove('open');
+  invUseId = null;
+}
+
+/* ── Confirmar uso de material ── */
+function invConfirmarUso() {
+  if (!invUseId) return;
+  const x    = inventario.find(i => i.id === invUseId);
+  if (!x) return;
+  const cant = parseInt(document.getElementById('inv-use-qty').value) || 1;
+
+  if (cant > (x.qty || 0)) {
+    /* Sobregiro de stock: avisar pero permitir */
+    if (!confirm(`⚠ Stock insuficiente.\nTienes ${x.qty||0} y quieres usar ${cant}.\n¿Continuar con stock negativo?`)) return;
+  }
+
+  x.qty = (x.qty || 0) - cant;
+  invSave();
+
+  /* Registrar como egreso si el usuario lo pide */
+  const conReg = document.getElementById('inv-use-reg').checked;
+  if (conReg && x.costo > 0) {
+    const bid    = document.getElementById('inv-use-banco').value;
+    const desc   = document.getElementById('inv-use-desc').value.trim() || `Uso ${x.nombre}`;
+    const monto  = x.costo * cant;
+    const inputEl = document.getElementById(bid);
+    if (inputEl) {
+      const curr = parseFloat(inputEl.value) || 0;
+      const nuevo = curr - monto;
+      inputEl.value = nuevo.toFixed(2);
+      actualizarColorSaldo(inputEl);
+
+      if (nuevo < 0) toast(`⚠ Sobregiro en cuenta: L ${fmt(nuevo)}`, 'warn');
+
+      const now = new Date();
+      const fk  = hoyKey();
+      const reg = {
+        id: Date.now(),
+        fecha: fechaHN(now), fechaKey: fk,
+        hora: horaHN(now),
+        desc, neto: monto, bruto: monto, comision: 0, diezmo: 0,
+        categoria: 'Insumos',
+        cliente: '',
+        pagado: 'Sí',
+        bancoId: bid,
+        bancoNombre: document.querySelector(`#inv-use-banco option[value="${bid}"]`)?.textContent || bid,
+        tipo: 'OUT'
+      };
+      registros.unshift(reg);
+      enviarAGoogleSheets(reg);
+      if (!sData[fk]) sData[fk] = {f:[], p:[], t:[]};
+      sData[fk].f.push({v: monto, d: desc, t: 'out', fromCaja: true});
+      actualizarLog();
+      calcular();
+      saveAll();
+      toast(`Egreso registrado: L ${fmt(monto)} · ${desc}`);
+    }
+  } else {
+    toast(`Usado: ${cant} × ${x.nombre} · Stock: ${x.qty}`);
+  }
+
+  invRender();
+  invCloseUse();
+}
+
+/* ── Integración con la Caja de Registro:
+   Si categoría = Reparación y hay repuesto ingresado en reg-costo,
+   ofrecer descontar del inventario al guardar ── */
+function invBuscarMaterialEnReg() {
+  const desc  = (document.getElementById('reg-desc')?.value  || '').toLowerCase();
+  const costo = parseFloat(document.getElementById('reg-costo')?.value) || 0;
+  if (!desc || costo <= 0 || currentType !== 'IN') return null;
+  /* Buscar en inventario un nombre que coincida parcialmente */
+  return inventario.find(x =>
+    x.tipo === 'material' &&
+    (desc.includes(x.nombre.toLowerCase()) || x.nombre.toLowerCase().split(' ').some(w => w.length > 3 && desc.includes(w)))
+  ) || null;
+}
+
+/* ── Conectar con tab ── */
+function invInit() {
+  invLoad();
+  invRender();
 }
 
 /* ═══ TOAST ═══ */
