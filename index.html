@@ -665,41 +665,54 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
 /* ── MÓVIL ── */
 @media (max-width: 768px) {
-  /* NAV: 2 filas — fila 1: logo+gas+tasas / fila 2: tabs con scroll */
+  /* Permitir scroll vertical en móvil */
+  body { overflow-x: hidden; overflow-y: auto; }
+
+  /* NAV: 2 filas separadas */
   nav {
-    padding: 0;
-    gap: 0;
-    flex-wrap: wrap;
-    height: auto;
-    min-height: unset;
+    height: auto !important;
+    min-height: unset !important;
     flex-direction: column;
     align-items: stretch;
+    padding: 0;
+    gap: 0;
   }
+  /* Fila 1: logo + gas + tasas */
   .nav-row1 {
     display: flex;
     align-items: center;
-    padding: 5px 10px;
-    gap: 7px;
-    border-bottom: 1px solid var(--bd);
-    min-height: 36px;
+    padding: 6px 10px;
+    gap: 8px;
+    width: 100%;
+    background: var(--s1);
   }
+  .logo { font-size: 0; margin-right: 0; flex-shrink: 0; }
+  .logo-badge { width: 24px; height: 24px; font-size: .7rem; }
+  .nav-right { gap: 6px; flex-shrink: 0; margin-left: auto; display: flex; align-items: center; }
+  .gas-status { font-size: .55rem; padding: 3px 7px; }
+  .rate-pill { font-size: .62rem; padding: 4px 9px; }
+
+  /* Fila 2: tabs con scroll horizontal */
   .nav-tabs {
-    display: flex;
-    gap: 2px;
+    display: flex !important;
+    gap: 3px;
     flex-wrap: nowrap;
     overflow-x: auto;
+    overflow-y: hidden;
     scrollbar-width: none;
-    padding: 4px 8px;
+    padding: 5px 8px;
+    width: 100%;
     background: var(--s1);
+    border-top: 1px solid var(--bd);
     -webkit-overflow-scrolling: touch;
   }
   .nav-tabs::-webkit-scrollbar { display: none; }
-  .logo { font-size: 0; margin-right: 0; flex-shrink: 0; }
-  .logo-badge { width: 22px; height: 22px; font-size: .68rem; }
-  .tab-btn { padding: 5px 10px; font-size: .65rem; white-space: nowrap; flex-shrink: 0; }
-  .nav-right { gap: 5px; flex-shrink: 0; margin-left: auto; }
-  .gas-status { font-size: .55rem; padding: 3px 6px; }
-  .rate-pill { font-size: .6rem; padding: 4px 8px; }
+  .tab-btn {
+    padding: 5px 11px;
+    font-size: .66rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 
   /* PAT-BAR: colapsable en móvil */
   .pat-toggle { display: flex !important; }
