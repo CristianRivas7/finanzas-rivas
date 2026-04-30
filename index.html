@@ -666,7 +666,8 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ── MÓVIL ── */
 @media (max-width: 768px) {
   /* Permitir scroll vertical en móvil */
-  body { overflow-x: hidden; overflow-y: auto; }
+  html, body { overflow-x: hidden; width: 100%; }
+  body { overflow-y: auto; }
 
   /* NAV: 2 filas separadas */
   nav {
@@ -676,6 +677,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     align-items: stretch;
     padding: 0;
     gap: 0;
+    width: 100%;
   }
   /* Fila 1: logo + gas + tasas */
   .nav-row1 {
@@ -702,6 +704,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     scrollbar-width: none;
     padding: 5px 8px;
     width: 100%;
+    box-sizing: border-box;
     background: var(--s1);
     border-top: 1px solid var(--bd);
     -webkit-overflow-scrolling: touch;
@@ -712,6 +715,13 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     font-size: .66rem;
     white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  /* Todas las vistas ocupan el 100% del ancho */
+  .view, .view.active {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   /* PAT-BAR: colapsable en móvil */
