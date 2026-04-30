@@ -665,27 +665,41 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
 /* ── MÓVIL ── */
 @media (max-width: 768px) {
-  /* NAV: una sola fila compacta, sin wrap */
+  /* NAV: 2 filas — fila 1: logo+gas+tasas / fila 2: tabs con scroll */
   nav {
-    padding: 0 8px;
+    padding: 0;
     gap: 0;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: unset;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nav-row1 {
+    display: flex;
+    align-items: center;
+    padding: 5px 10px;
+    gap: 7px;
+    border-bottom: 1px solid var(--bd);
+    min-height: 36px;
+  }
+  .nav-tabs {
+    display: flex;
+    gap: 2px;
     flex-wrap: nowrap;
-    min-height: 42px;
-    height: 42px;
-    overflow: hidden;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 4px 8px;
+    background: var(--s1);
+    -webkit-overflow-scrolling: touch;
   }
-  .logo {
-    font-size: 0;        /* ocultar texto, solo icono */
-    margin-right: 6px;
-    flex-shrink: 0;
-  }
-  .logo-badge { width: 24px; height: 24px; font-size: .7rem; }
-  .nav-tabs { gap: 2px; flex-wrap: nowrap; flex: 1; overflow-x: auto; scrollbar-width: none; }
   .nav-tabs::-webkit-scrollbar { display: none; }
-  .tab-btn { padding: 5px 9px; font-size: .63rem; white-space: nowrap; flex-shrink: 0; }
-  .nav-right { gap: 5px; flex-shrink: 0; }
-  .gas-status { font-size: .5rem; padding: 3px 5px; }
-  .rate-pill { font-size: .58rem; padding: 4px 7px; }
+  .logo { font-size: 0; margin-right: 0; flex-shrink: 0; }
+  .logo-badge { width: 22px; height: 22px; font-size: .68rem; }
+  .tab-btn { padding: 5px 10px; font-size: .65rem; white-space: nowrap; flex-shrink: 0; }
+  .nav-right { gap: 5px; flex-shrink: 0; margin-left: auto; }
+  .gas-status { font-size: .55rem; padding: 3px 6px; }
+  .rate-pill { font-size: .6rem; padding: 4px 8px; }
 
   /* PAT-BAR: colapsable en móvil */
   .pat-toggle { display: flex !important; }
@@ -776,20 +790,21 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
 <!-- NAV -->
 <nav>
-  <div class="logo"><div class="logo-badge">M</div>MultiServicios Rivas Tech Solutions</div>
-  <!-- CAMBIO 2: Orden de tabs: Registro Diario, Cajas, Historial, Calendario -->
+  <div class="nav-row1">
+    <div class="logo"><div class="logo-badge">M</div>MultiServicios Rivas Tech Solutions</div>
+    <div class="nav-right">
+      <span class="gas-status" id="gas-status">⚡ GAS: —</span>
+      <div class="rate-pill" onclick="openModal()" title="Editar tasas">
+        💱 USD L<span id="nb-usd">26.59</span> · EUR L<span id="nb-eur">30.69</span>
+      </div>
+    </div>
+  </div>
   <div class="nav-tabs">
     <button class="tab-btn" onclick="tab('v-reg',this)">Registro Diario</button>
     <button class="tab-btn active" onclick="tab('view-main',this)">Cajas</button>
     <button class="tab-btn" onclick="tab('view-history',this)">Historial</button>
     <button class="tab-btn" onclick="tab('v-cal',this)">Calendario</button>
     <button class="tab-btn" onclick="tab('v-inv',this)">📦 Inventario</button>
-  </div>
-  <div class="nav-right">
-    <span class="gas-status" id="gas-status">⚡ GAS: —</span>
-    <div class="rate-pill" onclick="openModal()" title="Editar tasas">
-      💱 USD L<span id="nb-usd">26.59</span> · EUR L<span id="nb-eur">30.69</span>
-    </div>
   </div>
 </nav>
 
