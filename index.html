@@ -1589,7 +1589,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxPdV2wrtJNH7KU-WT5vi5URtz_KATKn9D0eZZJ-NKzTE-2vnHCUyiIBRxiUtFnneZuzA/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbyJ9rncOrL9fQG9dhWNp5CucwINk_pMOchggI-xM5uBPk6y9u-s6dJG9BbmPkevE30DUw/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -1960,7 +1960,8 @@ async function enviarAGoogleSheets(reg) {
     params.append('fecha',            reg.fecha              || '');
     params.append('hora',             reg.hora               || '');
     params.append('descripcion',      reg.desc               || '');
-    params.append('cliente',          reg.cliente            || '');
+    params.append('cliente',          reg.tipoContacto === 'cliente'   ? (reg.cliente || '') : '');
+    params.append('proveedor',        reg.tipoContacto === 'proveedor' ? (reg.cliente || '') : '');
     params.append('categoria',        reg.categoria          || '');
     params.append('tipo',             reg.tipo               || '');
     params.append('montoBruto',       (reg.bruto || reg.neto || 0).toFixed(2));
