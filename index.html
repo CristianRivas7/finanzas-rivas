@@ -1102,8 +1102,18 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <!-- CIERRE MENSUAL -->
       <div class="psec psec-top" style="border-top-color:var(--amber)">
         <div class="psec-title" style="border-left-color:var(--amber)">📅 Cierre Mensual</div>
-        <p style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Genera un resumen del mes actual con ingresos, egresos, diezmos y ofrendas.</p>
-        <button class="btn-save" onclick="cierreMensual()" style="background:var(--amber);color:#080c10">GENERAR CIERRE DEL MES</button>
+        <p style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Selecciona el mes y genera el cierre con ingresos, egresos, costos, ganancias, diezmos y ofrendas.</p>
+        <!-- Selector de mes -->
+        <div class="pi-row" style="margin-bottom:8px">
+          <select id="cierre-mes" class="pi" style="margin:0;flex:1;font-size:.77rem"></select>
+          <select id="cierre-anio" class="pi" style="margin:0;width:80px;font-size:.77rem"></select>
+        </div>
+        <button class="btn-save" onclick="cierreMensual()" style="background:var(--amber);color:#080c10;margin-bottom:8px">📅 GENERAR CIERRE</button>
+        <!-- Historial de cierres -->
+        <div id="cierres-hist-wrap" style="display:none">
+          <div style="font-size:.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;border-left:3px solid var(--amber);padding-left:7px">Historial de Cierres</div>
+          <div id="cierres-hist" style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:5px"></div>
+        </div>
       </div>
 
     </div><!-- /panel -->
@@ -1478,6 +1488,61 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- MODAL CIERRE MENSUAL -->
+<div class="overlay" id="modal-cierre" onclick="if(event.target===this)closeCierreModal()">
+  <div class="modal" style="max-width:480px;width:95%">
+    <h3 style="color:var(--amber);margin-bottom:12px">📅 <span id="modal-cierre-titulo">Cierre Mensual</span></h3>
+    <!-- Filas de datos -->
+    <div style="background:var(--s3);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▲ Ingresos</div>
+          <div style="font-family:var(--mono);color:var(--green);font-size:.95rem;font-weight:600" id="mc-ingresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▼ Egresos</div>
+          <div style="font-family:var(--mono);color:var(--red);font-size:.95rem;font-weight:600" id="mc-egresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🔩 Costos</div>
+          <div style="font-family:var(--mono);color:var(--orange);font-size:.95rem;font-weight:600" id="mc-costos">L 0.00</div>
+        </div>
+        <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📈 Ganancia</div>
+          <div style="font-family:var(--mono);font-size:.95rem;font-weight:700" id="mc-ganancia">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🙏 Diezmos</div>
+          <div style="font-family:var(--mono);color:var(--purple);font-size:.95rem" id="mc-diezmos">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #4a1a7e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🎁 Ofrendas</div>
+          <div style="font-family:var(--mono);color:#c084fc;font-size:.95rem" id="mc-ofrendas">L 0.00</div>
+        </div>
+      </div>
+      <!-- Neto y margen -->
+      <div style="border-top:1px solid var(--bd2);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Neto del Mes</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;font-weight:700" id="mc-neto">L 0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Margen</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;font-weight:700;color:var(--amber)" id="mc-margen">0%</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Movimientos</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;color:var(--blue)" id="mc-movs">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeCierreModal()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--amber);color:#080c10" onclick="guardarCierre()">💾 Guardar Cierre</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL TASAS -->
 
 <div class="overlay" id="modal-tasas" onclick="if(event.target===this)closeModal()">
@@ -1515,6 +1580,7 @@ let diezmoTotal = 0;
 let diezmoHistorial = [];
 let ofrendaTotal = 0;
 let ofrendaHistorial = [];
+let historialCierres = [];
 let currentType = 'IN';
 let viewDate = new Date();
 let workDate = '';
@@ -1618,6 +1684,7 @@ function boot() {
   /* Poner fecha de hoy en el campo de fecha del registro */
   const regFecha = document.getElementById('reg-fecha');
   if (regFecha) regFecha.value = workDate;
+  inicializarSelectorCierre();
   syncBadge();
 }
 
@@ -2090,54 +2157,180 @@ function renderOfrendaHist() {
 }
 
 /* ═══ CIERRE MENSUAL ═══ */
-function cierreMensual() {
-  const ahora = new Date();
-  const mes   = ahora.toLocaleDateString('es-HN', {month:'long', year:'numeric', timeZone: TZ});
+let historialCierres = [];
+let cierreActual = null; // datos del cierre en el modal
 
-  const regs  = registros.filter(r => {
-    if (!r.fechaKey) return false;
+/* Inicializar selectores de mes y año */
+function inicializarSelectorCierre() {
+  const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const selMes  = document.getElementById('cierre-mes');
+  const selAnio = document.getElementById('cierre-anio');
+  if (!selMes || !selAnio) return;
+
+  const ahora = new Date();
+  selMes.innerHTML  = meses.map((m,i) =>
+    `<option value="${i}"${i===ahora.getMonth()?' selected':''}>${m}</option>`
+  ).join('');
+
+  const anioAct = ahora.getFullYear();
+  selAnio.innerHTML = [anioAct-1, anioAct, anioAct+1].map(a =>
+    `<option value="${a}"${a===anioAct?' selected':''}>${a}</option>`
+  ).join('');
+}
+
+function cierreMensual() {
+  const selMes  = document.getElementById('cierre-mes');
+  const selAnio = document.getElementById('cierre-anio');
+  const mesIdx  = parseInt(selMes.value);
+  const anio    = parseInt(selAnio.value);
+  const meses   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const mesNombre = meses[mesIdx] + ' ' + anio;
+
+  /* Filtrar registros del mes/año seleccionado */
+  const regs = registros.filter(r => {
+    if (!r.fechaKey || r.esCierre) return false;
     const d = new Date(r.fechaKey + 'T12:00:00');
-    return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
+    return d.getMonth() === mesIdx && d.getFullYear() === anio;
   });
 
-  const ingresos  = regs.filter(r => r.tipo === 'IN').reduce((a,b) => a + b.neto, 0);
-  const egresos   = regs.filter(r => r.tipo === 'OUT').reduce((a,b) => a + b.neto, 0);
-  const diezmos   = regs.reduce((a,b) => a + (b.diezmo || 0), 0);
-  const ofrendas  = regs.reduce((a,b) => a + (b.ofrenda || 0), 0);
-  const neto      = ingresos - egresos;
+  const ingresos = regs.filter(r => r.tipo==='IN').reduce((a,b) => a+(b.neto||0), 0);
+  const egresos  = regs.filter(r => r.tipo==='OUT').reduce((a,b) => a+(b.neto||0), 0);
+  const costos   = regs.reduce((a,b) => a+(b.costo||0), 0);
+  const diezmos  = regs.reduce((a,b) => a+(b.diezmo||0), 0);
+  const ofrendas = regs.reduce((a,b) => a+(b.ofrenda||0), 0);
+  const ganancia = ingresos - costos - egresos;
+  const neto     = ingresos - egresos;
+  const margen   = ingresos > 0 ? ((ganancia/ingresos)*100).toFixed(1) : 0;
 
-  const resumen = `📅 CIERRE MENSUAL — ${mes.toUpperCase()}
-─────────────────────────────
-▲ Ingresos:   L ${fmt(ingresos)}
-▼ Egresos:    L ${fmt(egresos)}
-═ Neto:       L ${fmt(neto)}
-─────────────────────────────
-🙏 Diezmos:   L ${fmt(diezmos)}
-🎁 Ofrendas:  L ${fmt(ofrendas)}
-Total espiritual: L ${fmt(diezmos + ofrendas)}
-─────────────────────────────
-📦 Movimientos: ${regs.length}
+  /* Guardar datos del cierre para usar en guardarCierre() */
+  cierreActual = { mesNombre, mesIdx, anio, ingresos, egresos, costos, ganancia, neto, diezmos, ofrendas, margen, totalMovs: regs.length };
 
-¿Deseas guardar este cierre en el historial?`;
+  /* Rellenar modal */
+  document.getElementById('modal-cierre-titulo').textContent = 'Cierre — ' + mesNombre;
+  document.getElementById('mc-ingresos').textContent = 'L ' + fmt(ingresos);
+  document.getElementById('mc-egresos').textContent  = 'L ' + fmt(egresos);
+  document.getElementById('mc-costos').textContent   = 'L ' + fmt(costos);
+  document.getElementById('mc-diezmos').textContent  = 'L ' + fmt(diezmos);
+  document.getElementById('mc-ofrendas').textContent = 'L ' + fmt(ofrendas);
+  document.getElementById('mc-movs').textContent     = regs.length;
 
-  if (!confirm(resumen)) return;
+  const ganEl = document.getElementById('mc-ganancia');
+  ganEl.textContent = 'L ' + fmt(ganancia);
+  ganEl.style.color = ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
 
-  /* Guardar cierre como registro especial */
+  const netoEl = document.getElementById('mc-neto');
+  netoEl.textContent = 'L ' + fmt(neto);
+  netoEl.style.color = neto >= 0 ? 'var(--green)' : 'var(--red)';
+
+  document.getElementById('mc-margen').textContent = margen + '%';
+  document.getElementById('mc-margen').style.color = ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
+
+  /* Abrir modal */
+  document.getElementById('modal-cierre').classList.add('open');
+}
+
+function closeCierreModal() {
+  document.getElementById('modal-cierre').classList.remove('open');
+}
+
+function guardarCierre() {
+  if (!cierreActual) return;
+  const c = cierreActual;
+
+  /* Verificar si ya existe cierre de ese mes */
+  const yaExiste = historialCierres.find(x => x.mesIdx === c.mesIdx && x.anio === c.anio);
+  if (yaExiste) {
+    if (!confirm(`Ya existe un cierre de ${c.mesNombre}.\n¿Deseas reemplazarlo?`)) return;
+    historialCierres = historialCierres.filter(x => !(x.mesIdx === c.mesIdx && x.anio === c.anio));
+  }
+
+  const cierreObj = {
+    ...c,
+    fechaGuardado: fechaHN(new Date()),
+    horaGuardado:  horaHN(new Date())
+  };
+  historialCierres.unshift(cierreObj);
+
+  /* Enviar a Google Sheets como fila especial */
   const cierreReg = {
     id: Date.now(),
-    fecha: fechaHN(ahora), fechaKey: hoyKey(),
-    hora: horaHN(ahora),
-    desc: `[CIERRE] ${mes} · Ingresos L${fmt(ingresos)} | Egresos L${fmt(egresos)} | Neto L${fmt(neto)}`,
-    neto: 0, bruto: 0, comision: 0, diezmo: 0, ofrenda: 0,
+    fecha: cierreObj.fechaGuardado, fechaKey: hoyKey(),
+    hora:  cierreObj.horaGuardado,
+    desc:  `[CIERRE] ${c.mesNombre} · Ingresos L${fmt(c.ingresos)} | Egresos L${fmt(c.egresos)} | Ganancia L${fmt(c.ganancia)}`,
+    neto: 0, bruto: 0, comision: 0, diezmo: c.diezmos, ofrenda: c.ofrendas,
+    costo: c.costos, ganancia: c.ganancia,
     categoria: 'Cierre Mensual', cliente: '', pagado: 'Sí',
+    observaciones: `Margen: ${c.margen}% | Movimientos: ${c.totalMovs}`,
     tipo: 'IN', bancoId: '', bancoNombre: 'CIERRE',
-    esCierre: true,
-    cierreData: { mes, ingresos, egresos, neto, diezmos, ofrendas, totalMovs: regs.length }
+    esCierre: true
   };
   registros.unshift(cierreReg);
   enviarAGoogleSheets(cierreReg);
+
   saveAll();
-  toast(`Cierre de ${mes} guardado ✓`);
+  renderHistorialCierres();
+  closeCierreModal();
+  toast(`✓ Cierre de ${c.mesNombre} guardado`);
+}
+
+/* Render historial de cierres en el panel */
+function renderHistorialCierres() {
+  const wrap = document.getElementById('cierres-hist-wrap');
+  const cont  = document.getElementById('cierres-hist');
+  if (!wrap || !cont) return;
+
+  if (!historialCierres.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'block';
+
+  cont.innerHTML = historialCierres.map(c => `
+    <div style="background:var(--s3);border:1px solid var(--bd2);border-left:3px solid var(--amber);
+      border-radius:7px;padding:9px 11px;cursor:pointer" onclick="verCierre('${c.mesNombre}')">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+        <span style="font-size:.72rem;font-weight:800;color:var(--amber)">${c.mesNombre}</span>
+        <span style="font-size:.62rem;color:var(--muted)">${c.fechaGuardado}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px">
+        <div style="text-align:center">
+          <div style="font-size:.55rem;color:var(--muted);text-transform:uppercase">Ingresos</div>
+          <div style="font-family:var(--mono);font-size:.75rem;color:var(--green)">L ${fmt(c.ingresos)}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.55rem;color:var(--muted);text-transform:uppercase">Ganancia</div>
+          <div style="font-family:var(--mono);font-size:.75rem;color:${c.ganancia>=0?'var(--amber)':'var(--red)'}">L ${fmt(c.ganancia)}</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:.55rem;color:var(--muted);text-transform:uppercase">Margen</div>
+          <div style="font-family:var(--mono);font-size:.75rem;color:var(--blue)">${c.margen}%</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function verCierre(mesNombre) {
+  const c = historialCierres.find(x => x.mesNombre === mesNombre);
+  if (!c) return;
+  cierreActual = c;
+  document.getElementById('modal-cierre-titulo').textContent = 'Cierre — ' + c.mesNombre;
+  document.getElementById('mc-ingresos').textContent = 'L ' + fmt(c.ingresos);
+  document.getElementById('mc-egresos').textContent  = 'L ' + fmt(c.egresos);
+  document.getElementById('mc-costos').textContent   = 'L ' + fmt(c.costos);
+  document.getElementById('mc-diezmos').textContent  = 'L ' + fmt(c.diezmos);
+  document.getElementById('mc-ofrendas').textContent = 'L ' + fmt(c.ofrendas);
+  document.getElementById('mc-movs').textContent     = c.totalMovs;
+  const ganEl = document.getElementById('mc-ganancia');
+  ganEl.textContent = 'L ' + fmt(c.ganancia);
+  ganEl.style.color = c.ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
+  const netoEl = document.getElementById('mc-neto');
+  netoEl.textContent = 'L ' + fmt(c.neto);
+  netoEl.style.color = c.neto >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('mc-margen').textContent = c.margen + '%';
+  document.getElementById('modal-cierre').classList.add('open');
 }
 
 /* ═══ ESTADO PAGADO DIEZMO/OFRENDA ═══ */
@@ -2344,6 +2537,7 @@ function saveAll() {
   localStorage.setItem('cr_sdata', JSON.stringify(sData));
   localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial, pagado: diezmoPagado}));
   localStorage.setItem('cr_ofrenda', JSON.stringify({total: ofrendaTotal, historial: ofrendaHistorial, pagada: ofrendaPagada}));
+  localStorage.setItem('cr_cierres', JSON.stringify(historialCierres));
   invSave();
 }
 
@@ -2369,11 +2563,15 @@ function loadAll() {
     ofrendaHistorial = oz.historial || [];
     if (oz.pagada) { ofrendaPagada = true; toggleOfrendaPagada(); ofrendaPagada = true; }
   }
+  const cz = JSON.parse(localStorage.getItem('cr_cierres') || 'null');
+  if (cz) historialCierres = cz;
+
   calcular();
   actualizarLog();
   buildBancoFilter();
   renderDiezmoHist();
   renderOfrendaHist();
+  renderHistorialCierres();
 }
 
 /* ═══ EXPORTAR CSV ═══ */
