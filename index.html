@@ -866,6 +866,14 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div class="pat-chip"><span class="pat-clabel">Lps</span><span class="pat-cval c-diezmo" id="p-diezmo">0.00</span></div>
     </div>
   </div>
+  <div class="pat-group">
+    <span class="pat-gtitle">📈 Ganancia Neta (mes)</span>
+    <div class="pat-row">
+      <div class="pat-chip"><span class="pat-clabel">Ingresos</span><span class="pat-cval" style="color:var(--green)" id="p-gan-in">0.00</span></div>
+      <div class="pat-chip"><span class="pat-clabel">Costos</span><span class="pat-cval" style="color:var(--red)" id="p-gan-cos">0.00</span></div>
+      <div class="pat-chip"><span class="pat-clabel">Ganancia</span><span class="pat-cval" style="color:var(--amber)" id="p-gan-net">0.00</span></div>
+    </div>
+  </div>
   <div class="pat-right">
     <button class="top-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
     <button class="top-btn" onclick="syncGAS()">☁ Sincronizar</button>
@@ -1144,6 +1152,16 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div class="col-totals">
         <div class="trow">Lempiras (Lps): <span class="t-lps" id="t-mi-lps">0.00</span></div>
         <div class="trow">Dólares (USD):  <span class="t-usd" id="t-mi-usd">0.00</span></div>
+        <!-- Resumen ganancia -->
+        <div style="border-top:1px dashed var(--bd2);margin-top:7px;padding-top:7px">
+          <div style="font-size:.58rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">📈 Resumen del Mes</div>
+          <div class="trow" style="margin-bottom:3px">Ingresos: <span style="color:var(--green);font-family:var(--mono)" id="dash-ingresos">L 0.00</span></div>
+          <div class="trow" style="margin-bottom:3px">Costos: <span style="color:var(--red);font-family:var(--mono)" id="dash-costos">L 0.00</span></div>
+          <div class="trow" style="margin-bottom:3px">Egresos: <span style="color:var(--orange);font-family:var(--mono)" id="dash-egresos">L 0.00</span></div>
+          <div style="border-top:1px solid var(--bd2);margin:5px 0;"></div>
+          <div class="trow"><strong style="color:var(--amber)">Ganancia Neta:</strong> <span style="color:var(--amber);font-family:var(--mono);font-weight:700;font-size:.95rem" id="dash-ganancia">L 0.00</span></div>
+          <div class="trow" style="margin-top:3px"><span style="font-size:.6rem;color:var(--dim)">Margen:</span> <span style="color:var(--muted);font-family:var(--mono);font-size:.75rem" id="dash-margen">0%</span></div>
+        </div>
       </div>
     </div>
 
@@ -1702,6 +1720,40 @@ function calcular() {
 
   document.getElementById('p-diezmo').textContent = fmt(diezmoTotal);
   document.getElementById('diezmo-val').value = fmt(diezmoTotal);
+
+  /* ── Ganancia del mes actual ── */
+  const ahora   = new Date();
+  const mesAct  = ahora.getMonth();
+  const anioAct = ahora.getFullYear();
+  const regsMes = registros.filter(r => {
+    if (!r.fechaKey) return false;
+    const d = new Date(r.fechaKey + 'T12:00:00');
+    return d.getMonth() === mesAct && d.getFullYear() === anioAct;
+  });
+  const totalIngresos = regsMes.filter(r => r.tipo === 'IN').reduce((a,b) => a + (b.neto || 0), 0);
+  const totalCostos   = regsMes.filter(r => r.tipo === 'IN').reduce((a,b) => a + (b.costo || 0), 0);
+  const totalEgresos  = regsMes.filter(r => r.tipo === 'OUT').reduce((a,b) => a + (b.neto || 0), 0);
+  const gananciaNeta  = totalIngresos - totalCostos - totalEgresos;
+  const margen        = totalIngresos > 0 ? ((gananciaNeta / totalIngresos) * 100).toFixed(1) : 0;
+
+  const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.textContent = val; };
+  setEl('dash-ingresos', 'L ' + fmt(totalIngresos));
+  setEl('dash-costos',   'L ' + fmt(totalCostos));
+  setEl('dash-egresos',  'L ' + fmt(totalEgresos));
+  setEl('dash-margen',   margen + '%');
+
+  const ganEl = document.getElementById('dash-ganancia');
+  if (ganEl) {
+    ganEl.textContent = 'L ' + fmt(gananciaNeta);
+    ganEl.style.color = gananciaNeta >= 0 ? 'var(--amber)' : 'var(--red)';
+  }
+  setEl('p-gan-in',  fmt(totalIngresos));
+  setEl('p-gan-cos', fmt(totalCostos));
+  const pGanNet = document.getElementById('p-gan-net');
+  if (pGanNet) {
+    pGanNet.textContent = fmt(gananciaNeta);
+    pGanNet.style.color = gananciaNeta >= 0 ? 'var(--amber)' : 'var(--red)';
+  }
 
   /* Actualizar resumen en el toggle de móvil */
   const togLps = document.getElementById('nb-pe-lps-tog');
