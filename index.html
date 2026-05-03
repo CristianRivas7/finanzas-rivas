@@ -1978,6 +1978,24 @@ async function enviarAGoogleSheets(reg) {
   }
 }
 
+/* ═══ GENERADOR DE ID LEGIBLE ═══ */
+function generarID(fecha) {
+  const d   = String(fecha.getDate()).padStart(2,'0');
+  const m   = String(fecha.getMonth() + 1).padStart(2,'0');
+  const a   = fecha.getFullYear();
+  const h   = String(fecha.getHours()).padStart(2,'0');
+  const min = String(fecha.getMinutes()).padStart(2,'0');
+
+  // Número secuencial del día
+  const hoy = hoyKey();
+  const countHoy = registros.filter(r =>
+    r.fechaKey === hoy && r.id && String(r.id).includes('-')
+  ).length + 1;
+
+  const seq = String(countHoy).padStart(3, '0');
+  return `${d}${m}${a}-${h}${min}-${seq}`;
+}
+
 /* ═══ GUARDAR REGISTRO ═══ */
 function guardar() {
   const desc       = document.getElementById('reg-desc').value.trim();
@@ -2059,7 +2077,7 @@ function guardar() {
 
   const now = new Date();
   const reg = {
-    id: Date.now(),
+    id: generarID(now),
     fecha: fechaDisplay, fechaKey: fk,
     hora: horaHN(now),
     desc, neto, bruto, comision: com,
