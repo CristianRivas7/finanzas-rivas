@@ -978,7 +978,24 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         </select>
         <div class="pi-row">
           <input type="number" id="reg-costo"   class="pi" placeholder="Costo del repuesto (Lps)" oninput="prevDiezmo();prevOfrenda()">
-          <input type="text"   id="reg-cliente" class="pi" placeholder="Cliente / Proveedor">
+          <!-- Cliente / Proveedor separados -->
+          <div style="flex:1;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;gap:4px">
+              <button id="btn-cli" onclick="toggleClienteProv('cliente')"
+                style="flex:1;padding:4px 6px;font-size:.68rem;font-weight:800;border-radius:5px;cursor:pointer;font-family:var(--font);
+                       background:var(--grn-bg);color:var(--green);border:1px solid #0a3a1a;transition:.2s">
+                👤 Cliente
+              </button>
+              <button id="btn-prov" onclick="toggleClienteProv('proveedor')"
+                style="flex:1;padding:4px 6px;font-size:.68rem;font-weight:800;border-radius:5px;cursor:pointer;font-family:var(--font);
+                       background:var(--s3);color:var(--muted);border:1px solid var(--bd);transition:.2s">
+                🏪 Proveedor
+              </button>
+            </div>
+            <input type="text" id="reg-cliente" class="pi"
+              placeholder="Nombre del cliente..."
+              style="margin:0;font-size:.77rem">
+          </div>
         </div>
         <div class="pi-row">
           <input type="text" id="reg-proyecto-id" class="pi" placeholder="🔑 ID Proyecto / Factura (ej: P-001)" style="font-family:var(--mono);font-size:.77rem">
@@ -1978,6 +1995,34 @@ async function enviarAGoogleSheets(reg) {
   }
 }
 
+/* ═══ CLIENTE / PROVEEDOR TOGGLE ═══ */
+let tipoContacto = 'cliente'; // valor por defecto
+
+function toggleClienteProv(tipo) {
+  tipoContacto = tipo;
+  const btnCli  = document.getElementById('btn-cli');
+  const btnProv = document.getElementById('btn-prov');
+  const input   = document.getElementById('reg-cliente');
+
+  if (tipo === 'cliente') {
+    btnCli.style.background  = 'var(--grn-bg)';
+    btnCli.style.color       = 'var(--green)';
+    btnCli.style.borderColor = '#0a3a1a';
+    btnProv.style.background = 'var(--s3)';
+    btnProv.style.color      = 'var(--muted)';
+    btnProv.style.borderColor= 'var(--bd)';
+    input.placeholder        = 'Nombre del cliente...';
+  } else {
+    btnProv.style.background = 'var(--amb-bg)';
+    btnProv.style.color      = 'var(--amber)';
+    btnProv.style.borderColor= '#3d2a00';
+    btnCli.style.background  = 'var(--s3)';
+    btnCli.style.color       = 'var(--muted)';
+    btnCli.style.borderColor = 'var(--bd)';
+    input.placeholder        = 'Nombre del proveedor...';
+  }
+}
+
 /* ═══ GENERADOR DE ID LEGIBLE ═══ */
 function generarID(fecha) {
   const d   = String(fecha.getDate()).padStart(2,'0');
@@ -2087,6 +2132,7 @@ function guardar() {
     categoria, cliente, pagado,
     observaciones: obs,
     proyectoId, tipoMov,
+    tipoContacto: tipoContacto,
     bancoId: bid, bancoNombre: sel.options[sel.selectedIndex].text,
     tipo: currentType
   };
@@ -2108,6 +2154,7 @@ function guardar() {
   document.getElementById('reg-tipo-mov').value     = 'normal';
   document.getElementById('proyecto-resumen').style.display = 'none';
   document.getElementById('com-prev').classList.remove('show');
+  toggleClienteProv('cliente'); // reset a cliente por defecto
 
   actualizarLog(); calcular(); saveAll(); buildBancoFilter();
   toast(`${currentType === 'IN' ? '▲ Ingreso' : '▼ Egreso'} guardado: L ${fmt(neto)}`);
