@@ -159,7 +159,7 @@ nav {
 /* ── CAJAS LAYOUT ── */
 .cajas-wrap {
   display: grid;
-  grid-template-columns: 330px 1fr 1fr;
+  grid-template-columns: 420px 1fr 1fr;
   gap: 10px;
   padding: 10px;
   height: 100%;
@@ -869,6 +869,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="pat-right">
     <button class="top-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
     <button class="top-btn" onclick="syncGAS()">☁ Sincronizar</button>
+    <button class="top-btn" onclick="cierreMensual()" style="border-color:var(--amber);color:var(--amber)">📅 Cierre Mes</button>
     <div style="position:relative;display:inline-block" id="adv-wrap">
       <button class="top-btn" onclick="toggleAdvMenu()" title="Opciones avanzadas" style="padding:4px 8px;font-size:.7rem">⚙️</button>
       <div id="adv-menu" style="
@@ -901,9 +902,15 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
           <button class="tbtn"    id="btn-out" onclick="setType('OUT')">▼ Egreso</button>
         </div>
         <input type="text"   id="reg-desc"  class="pi" placeholder="Descripción del movimiento">
+        <!-- FECHA PERSONALIZADA: para registrar facturas de días anteriores -->
+        <div class="pi-row" style="margin-bottom:6px;align-items:center;gap:6px">
+          <label style="font-size:.65rem;color:var(--muted);font-weight:700;white-space:nowrap">📅 Fecha:</label>
+          <input type="date" id="reg-fecha" class="pi" style="margin:0;flex:1;font-size:.77rem">
+          <button onclick="document.getElementById('reg-fecha').value=hoyKey()" style="background:var(--s3);border:1px solid var(--bd);color:var(--muted);border-radius:5px;padding:4px 8px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700;white-space:nowrap">Hoy</button>
+        </div>
         <div class="pi-row">
-          <input type="number" id="reg-monto" class="pi" placeholder="Monto" oninput="prevComision();prevDiezmo()">
-          <select id="reg-banco" class="pi" style="flex:1.6;font-size:.7rem" onchange="prevComision();prevDiezmo()">
+          <input type="number" id="reg-monto" class="pi" placeholder="Monto" oninput="prevComision();prevDiezmo();prevOfrenda()">
+          <select id="reg-banco" class="pi" style="flex:1.6;font-size:.7rem" onchange="prevComision();prevDiezmo();prevOfrenda()">
             <optgroup label="— EFECTIVO —">
               <option value="mi-caja-lps" data-com="0">Caja Chica </option>
             </optgroup>
@@ -939,30 +946,88 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         <!-- CAMPOS NUEVOS: Categoría, Costo, Cliente, Pagado -->
         <select id="reg-categoria" class="pi">
           <option value="">— Categoría —</option>
-          <option value="Reparación">Reparación</option>
-          <option value="Venta">Venta</option>
-          <option value="Servicio">Servicio</option>
-          <option value="Pago de cuenta">Pago de cuenta</option>
-          <option value="Nómina">Nómina</option>
-          <option value="Insumos">Insumos</option>
-          <option value="Transferencia">Transferencia</option>
-          <option value="Otros">Otros</option>
+          <optgroup label="— Ingresos —">
+            <option value="Reparación">Reparación</option>
+            <option value="Venta">Venta</option>
+            <option value="Servicio">Servicio</option>
+            <option value="Adelanto">Adelanto</option>
+            <option value="Saldo">Pago de Saldo</option>
+          </optgroup>
+          <optgroup label="— Egresos —">
+            <option value="Pago de cuenta">Pago de cuenta</option>
+            <option value="Nómina">Nómina</option>
+            <option value="Insumos">Insumos</option>
+            <option value="Crédito dado">Crédito otorgado</option>
+          </optgroup>
+          <optgroup label="— Espiritual —">
+            <option value="Diezmo">Diezmo</option>
+            <option value="Ofrenda">Ofrenda</option>
+          </optgroup>
+          <optgroup label="— General —">
+            <option value="Transferencia">Transferencia</option>
+            <option value="Otros">Otros</option>
+          </optgroup>
         </select>
         <div class="pi-row">
-          <input type="number" id="reg-costo"   class="pi" placeholder="Costo del repuesto (Lps)" oninput="prevDiezmo()">
+          <input type="number" id="reg-costo"   class="pi" placeholder="Costo del repuesto (Lps)" oninput="prevDiezmo();prevOfrenda()">
           <input type="text"   id="reg-cliente" class="pi" placeholder="Cliente / Proveedor">
+        </div>
+        <div class="pi-row">
+          <input type="text" id="reg-proyecto-id" class="pi" placeholder="🔑 ID Proyecto / Factura (ej: P-001)" style="font-family:var(--mono);font-size:.77rem">
+          <select id="reg-tipo-mov" class="pi" style="flex:1;font-size:.73rem" onchange="toggleAdelantoSaldo()">
+            <option value="normal">Movimiento normal</option>
+            <option value="adelanto">💰 Adelanto recibido</option>
+            <option value="saldo">✅ Pago de saldo</option>
+            <option value="credito-cliente">📤 Crédito a cliente</option>
+            <option value="credito-proveedor">📥 Crédito de proveedor</option>
+          </select>
+        </div>
+        <!-- Panel de resumen adelanto/saldo por proyecto -->
+        <div id="proyecto-resumen" style="display:none;background:var(--blue-bg);border:1px solid var(--bd2);border-radius:6px;padding:8px;margin-bottom:6px;font-size:.72rem">
+          <div style="color:var(--blue);font-weight:800;margin-bottom:4px">📊 Proyecto: <span id="proy-id-label">—</span></div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <span>Adelantos: <strong style="color:var(--green)" id="proy-adelantos">L 0.00</strong></span>
+            <span>Saldos pagados: <strong style="color:var(--acc)" id="proy-saldos">L 0.00</strong></span>
+            <span>Pendiente: <strong style="color:var(--amber)" id="proy-pendiente">L 0.00</strong></span>
+          </div>
         </div>
         <select id="reg-pagado" class="pi">
           <option value="Sí">✅ Pagado</option>
           <option value="Pendiente">⏳ Pendiente</option>
           <option value="Parcial">🔸 Parcial</option>
         </select>
-        <!-- DIEZMO CHECKBOX — CAMBIO 3: ahora es 20% -->
+        <!-- DIEZMO: checkbox manual, 10% -->
         <div class="diezmo-check-row" id="diezmo-row" style="display:none">
           <input type="checkbox" id="chk-diezmo" onchange="prevDiezmo()">
-          <label for="chk-diezmo">Apartar Diezmo (20%)</label>
+          <label for="chk-diezmo">🙏 Apartar Diezmo (10%)</label>
           <span class="diezmo-preview" id="diezmo-preview">L 0.00</span>
         </div>
+        <!-- OFRENDA: porcentaje libre -->
+        <div class="diezmo-check-row" id="ofrenda-row" style="display:none;border-color:#2d1a5e;background:var(--pur-bg)">
+          <input type="checkbox" id="chk-ofrenda" onchange="prevOfrenda()">
+          <label for="chk-ofrenda" style="color:#c084fc">🎁 Apartar Ofrenda</label>
+          <input type="number" id="ofrenda-pct" class="pi" placeholder="%" min="1" max="100" value="5" step="1"
+            style="width:56px;margin:0;padding:3px 5px;font-size:.75rem;text-align:center" oninput="prevOfrenda()">
+          <span style="font-size:.68rem;color:#c084fc">%</span>
+          <span class="diezmo-preview" id="ofrenda-preview" style="color:#c084fc">L 0.00</span>
+        </div>
+        <!-- CRÉDITO -->
+        <div id="credito-row" style="display:none;background:var(--blue-bg);border:1px solid var(--bd2);border-radius:6px;padding:6px 9px;margin-bottom:6px">
+          <div style="font-size:.63rem;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">💳 Crédito</div>
+          <div class="pi-row" style="margin-bottom:0">
+            <select id="reg-credito-tipo" class="pi" style="margin:0;flex:1;font-size:.73rem">
+              <option value="">— Sin crédito —</option>
+              <option value="adelanto">Adelanto (cobro parcial)</option>
+              <option value="saldo">Saldo pendiente por cobrar</option>
+              <option value="credito-dado">Crédito otorgado a cliente</option>
+              <option value="credito-recibido">Crédito recibido de proveedor</option>
+            </select>
+            <input type="text" id="reg-credito-id" class="pi" placeholder="ID Proyecto/Factura" style="margin:0;flex:1">
+          </div>
+        </div>
+        <!-- OBSERVACIONES -->
+        <textarea id="reg-obs" class="pi" placeholder="Observaciones (opcional)..." rows="2"
+          style="resize:vertical;font-size:.77rem;margin-bottom:6px"></textarea>
         <button class="btn-save" id="btn-save" onclick="guardar()">GUARDAR MOVIMIENTO</button>
         <div class="mlog" id="mlog"></div>
       </div>
@@ -998,12 +1063,39 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <!-- DIEZMO ACUMULADO -->
       <div class="psec psec-top" style="border-top-color:var(--purple)">
         <div class="psec-title" style="border-left-color:var(--purple)">Diezmo Acumulado</div>
+        <!-- Indicador de estado -->
+        <div id="diezmo-status" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span id="diezmo-pagado-badge" style="font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--pur-bg);color:var(--purple);border:1px solid #3a1a6e">⏳ PENDIENTE</span>
+          <button onclick="toggleDiezmoPagado()" style="background:var(--s3);border:1px solid var(--bd);color:var(--muted);border-radius:5px;padding:3px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">Marcar pagado</button>
+        </div>
         <input id="diezmo-val" class="diezmo-disp" value="0.00" readonly>
         <div class="diezmo-btns">
           <button class="dbtn" onclick="diezmoManual()">+ Manual</button>
           <button class="dbtn dbtn-reset" onclick="diezmoEntregar()">Entregar / Resetear</button>
         </div>
         <div class="diezmo-hist" id="diezmo-hist"></div>
+      </div>
+
+      <!-- OFRENDA ACUMULADA -->
+      <div class="psec psec-top" style="border-top-color:#a855f7">
+        <div class="psec-title" style="border-left-color:#a855f7;color:#c084fc">🎁 Ofrenda Acumulada</div>
+        <div id="ofrenda-status" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span id="ofrenda-pagada-badge" style="font-size:.65rem;font-weight:800;padding:3px 9px;border-radius:20px;background:var(--pur-bg);color:#c084fc;border:1px solid #4a1a7e">⏳ PENDIENTE</span>
+          <button onclick="toggleOfrendaPagada()" style="background:var(--s3);border:1px solid var(--bd);color:var(--muted);border-radius:5px;padding:3px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">Marcar pagada</button>
+        </div>
+        <input id="ofrenda-val" class="diezmo-disp" style="color:#c084fc;background:var(--pur-bg);border-color:#4a1a7e" value="0.00" readonly>
+        <div class="diezmo-btns">
+          <button class="dbtn" style="color:#c084fc" onclick="ofrendaManual()">+ Manual</button>
+          <button class="dbtn dbtn-reset" onclick="ofrendaEntregar()">Entregar / Resetear</button>
+        </div>
+        <div class="diezmo-hist" id="ofrenda-hist"></div>
+      </div>
+
+      <!-- CIERRE MENSUAL -->
+      <div class="psec psec-top" style="border-top-color:var(--amber)">
+        <div class="psec-title" style="border-left-color:var(--amber)">📅 Cierre Mensual</div>
+        <p style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Genera un resumen del mes actual con ingresos, egresos, diezmos y ofrendas.</p>
+        <button class="btn-save" onclick="cierreMensual()" style="background:var(--amber);color:#080c10">GENERAR CIERRE DEL MES</button>
       </div>
 
     </div><!-- /panel -->
@@ -1403,6 +1495,8 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbyaaZKwdyn9NdIlDq4d9IA-
 let registros = [];
 let diezmoTotal = 0;
 let diezmoHistorial = [];
+let ofrendaTotal = 0;
+let ofrendaHistorial = [];
 let currentType = 'IN';
 let viewDate = new Date();
 let workDate = '';
@@ -1503,6 +1597,9 @@ function boot() {
   renderCal();
   const jumpEl = document.getElementById('jump');
   if (jumpEl) jumpEl.value = workDate;
+  /* Poner fecha de hoy en el campo de fecha del registro */
+  const regFecha = document.getElementById('reg-fecha');
+  if (regFecha) regFecha.value = workDate;
   syncBadge();
 }
 
@@ -1622,16 +1719,21 @@ function setType(t) {
   s.style.background = t === 'IN' ? 'var(--acc)' : 'var(--red)';
   s.style.color      = t === 'IN' ? '#080c10' : '#fff';
 
-  /* mostrar checkbox diezmo solo en ingresos */
-  const diezmoRow = document.getElementById('diezmo-row');
+  /* mostrar checkbox diezmo y ofrenda solo en ingresos */
+  const diezmoRow  = document.getElementById('diezmo-row');
+  const ofrendaRow = document.getElementById('ofrenda-row');
   if (t === 'IN') {
-    diezmoRow.style.display = 'flex';
+    diezmoRow.style.display  = 'flex';
+    ofrendaRow.style.display = 'flex';
   } else {
-    diezmoRow.style.display = 'none';
-    document.getElementById('chk-diezmo').checked = false;
+    diezmoRow.style.display  = 'none';
+    ofrendaRow.style.display = 'none';
+    document.getElementById('chk-diezmo').checked  = false;
+    document.getElementById('chk-ofrenda').checked = false;
   }
   prevComision();
   prevDiezmo();
+  prevOfrenda();
 }
 
 /* ═══ PREVIEW COMISIÓN ═══ */
@@ -1651,8 +1753,8 @@ function prevComision() {
   }
 }
 
-/* ═══ PREVIEW DIEZMO — CAMBIO 3: 20% ═══ */
-const DIEZMO_PCT = 0.20; // Cambiado de 0.10 a 0.20
+/* ═══ PREVIEW DIEZMO — 10% manual ═══ */
+const DIEZMO_PCT = 0.10; // 10% correcto
 
 function prevDiezmo() {
   const chk   = document.getElementById('chk-diezmo');
@@ -1664,6 +1766,40 @@ function prevDiezmo() {
   } else if (prev) {
     prev.textContent = 'L 0.00';
   }
+}
+
+/* ═══ PREVIEW OFRENDA ═══ */
+function prevOfrenda() {
+  const chk   = document.getElementById('chk-ofrenda');
+  const prev  = document.getElementById('ofrenda-preview');
+  const monto = parseFloat(document.getElementById('reg-monto').value) || 0;
+  const pct   = parseFloat(document.getElementById('ofrenda-pct').value) || 0;
+  if (chk && chk.checked && monto > 0 && pct > 0) {
+    prev.textContent = 'L ' + (monto * pct / 100).toFixed(2);
+  } else if (prev) {
+    prev.textContent = 'L 0.00';
+  }
+}
+
+/* ═══ MOSTRAR/OCULTAR CRÉDITO Y ADELANTO ═══ */
+function toggleAdelantoSaldo() {
+  const tipo = document.getElementById('reg-tipo-mov').value;
+  const pid  = (document.getElementById('reg-proyecto-id').value || '').trim();
+  if (pid && tipo !== 'normal') mostrarResumenProyecto(pid);
+  else document.getElementById('proyecto-resumen').style.display = 'none';
+}
+
+function mostrarResumenProyecto(pid) {
+  const regs = registros.filter(r => (r.proyectoId || '').toLowerCase() === pid.toLowerCase());
+  const adelantos = regs.filter(r => r.tipoMov === 'adelanto').reduce((a,b) => a + b.neto, 0);
+  const saldos    = regs.filter(r => r.tipoMov === 'saldo').reduce((a,b) => a + b.neto, 0);
+  const creditos  = regs.filter(r => r.tipoMov === 'credito-cliente').reduce((a,b) => a + b.neto, 0);
+  const pendiente = creditos + adelantos - saldos;
+  document.getElementById('proy-id-label').textContent  = pid.toUpperCase();
+  document.getElementById('proy-adelantos').textContent = 'L ' + fmt(adelantos);
+  document.getElementById('proy-saldos').textContent    = 'L ' + fmt(saldos);
+  document.getElementById('proy-pendiente').textContent = 'L ' + fmt(Math.max(0, pendiente));
+  document.getElementById('proyecto-resumen').style.display = 'block';
 }
 
 /* ═══════════════════════════════════════════
@@ -1679,19 +1815,32 @@ async function enviarAGoogleSheets(reg) {
   const statusEl = document.getElementById('gas-status');
   try {
     const params = new URLSearchParams();
-    params.append('action',      'registro');
-    params.append('num',         String(reg.id));
-    params.append('fecha',       reg.fecha        || '');
-    params.append('descripcion', reg.desc         || '');
-    params.append('categoria',   reg.categoria    || '');
-    params.append('tipo',        reg.tipo         || '');
-    params.append('monto',       (reg.bruto  || reg.neto || 0).toFixed(2));
-    params.append('costo',       (reg.costo  || 0).toFixed(2));
-    params.append('ganancia',    (reg.ganancia || 0).toFixed(2));
-    params.append('diezmo',      (reg.diezmo  || 0).toFixed(2));
-    params.append('pagado',      reg.pagado       || 'Sí');
-    params.append('cliente',     reg.cliente      || '');
-    params.append('metodo',      reg.bancoNombre  || '');
+    // Columnas en orden exacto del Google Sheet:
+    // ID | Fecha | Hora | Descripción | Cliente | Categoría | Tipo | Monto Bruto |
+    // Costo | Ganancia | Comisión | Cuenta | Anticipo | Saldos | Neto |
+    // Diezmos | Ofrendas | Diezmos Pagados | Ofrendas Pagadas | Estado de Pago | Observaciones
+    params.append('action',           'registro');
+    params.append('id',               String(reg.id));
+    params.append('fecha',            reg.fecha              || '');
+    params.append('hora',             reg.hora               || '');
+    params.append('descripcion',      reg.desc               || '');
+    params.append('cliente',          reg.cliente            || '');
+    params.append('categoria',        reg.categoria          || '');
+    params.append('tipo',             reg.tipo               || '');
+    params.append('montoBruto',       (reg.bruto || reg.neto || 0).toFixed(2));
+    params.append('costo',            (reg.costo    || 0).toFixed(2));
+    params.append('ganancia',         (reg.ganancia || 0).toFixed(2));
+    params.append('comision',         (reg.comision || 0).toFixed(2));
+    params.append('cuenta',           reg.bancoNombre        || '');
+    params.append('anticipo',         reg.tipoMov === 'adelanto'        ? (reg.neto||0).toFixed(2) : '0.00');
+    params.append('saldos',           reg.tipoMov === 'saldo'           ? (reg.neto||0).toFixed(2) : '0.00');
+    params.append('neto',             (reg.neto || 0).toFixed(2));
+    params.append('diezmos',          (reg.diezmo  || 0).toFixed(2));
+    params.append('ofrendas',         (reg.ofrenda || 0).toFixed(2));
+    params.append('diezmosPagados',   diezmoPagado  ? 'Sí' : 'No');
+    params.append('ofrendasPagadas',  ofrendaPagada ? 'Sí' : 'No');
+    params.append('estadoPago',       reg.pagado             || 'Sí');
+    params.append('observaciones',    reg.observaciones      || '');
 
     await fetch(GAS_URL, {
       method: 'POST',
@@ -1712,21 +1861,31 @@ async function enviarAGoogleSheets(reg) {
 
 /* ═══ GUARDAR REGISTRO ═══ */
 function guardar() {
-  const desc      = document.getElementById('reg-desc').value.trim();
-  const bruto     = parseFloat(document.getElementById('reg-monto').value);
-  const costo     = parseFloat(document.getElementById('reg-costo').value)   || 0;
-  const categoria = document.getElementById('reg-categoria').value.trim()    || '';
-  const cliente   = document.getElementById('reg-cliente').value.trim()      || '';
-  const pagado    = document.getElementById('reg-pagado').value              || 'Sí';
-  const sel       = document.getElementById('reg-banco');
-  const bid       = sel.value;
-  const com       = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-com') || 0);
+  const desc       = document.getElementById('reg-desc').value.trim();
+  const bruto      = parseFloat(document.getElementById('reg-monto').value);
+  const costo      = parseFloat(document.getElementById('reg-costo').value)    || 0;
+  const categoria  = document.getElementById('reg-categoria').value.trim()     || '';
+  const cliente    = document.getElementById('reg-cliente').value.trim()       || '';
+  const pagado     = document.getElementById('reg-pagado').value               || 'Sí';
+  const obs        = document.getElementById('reg-obs').value.trim()           || '';
+  const proyectoId = document.getElementById('reg-proyecto-id').value.trim()   || '';
+  const tipoMov    = document.getElementById('reg-tipo-mov').value             || 'normal';
+  const sel        = document.getElementById('reg-banco');
+  const bid        = sel.value;
+  const com        = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-com') || 0);
+
+  /* Fecha personalizada o hoy */
+  const fechaInputVal = document.getElementById('reg-fecha').value;
+  const fk = fechaInputVal || hoyKey();
+  const fechaDisplay = fechaInputVal
+    ? new Date(fechaInputVal + 'T12:00:00').toLocaleDateString('es-HN', {day:'2-digit', month:'2-digit', year:'numeric'})
+    : fechaHN(new Date());
 
   if (!desc || isNaN(bruto) || bruto <= 0) {
     toast('Escribe descripción y monto', 'err'); return;
   }
 
-  const neto    = (currentType === 'IN' && com > 0) ? bruto - bruto * com / 100 : bruto;
+  const neto     = (currentType === 'IN' && com > 0) ? bruto - bruto * com / 100 : bruto;
   const ganancia = currentType === 'IN' ? Math.max(0, neto - costo) : 0;
 
   if (currentType === 'OUT' && bruto >= 10000) {
@@ -1739,16 +1898,14 @@ function guardar() {
   const curr = parseFloat(inputEl.value) || 0;
   const nuevoSaldo = currentType === 'IN' ? curr + neto : curr - neto;
 
-  /* ── SOBREGIRO: permitido, pero avisa y pinta en rojo ── */
   if (currentType === 'OUT' && nuevoSaldo < 0) {
     toast(`⚠ Sobregiro: saldo quedará en L ${fmt(nuevoSaldo)}`, 'warn');
   }
 
   inputEl.value = nuevoSaldo.toFixed(2);
-  /* Colorear la celda según positivo/negativo */
   actualizarColorSaldo(inputEl);
 
-  /* ─── DIEZMO 20% (sobre ganancia si hay costo, o sobre neto si no) ─── */
+  /* ─── DIEZMO 10% manual ─── */
   let diezmoApartado = 0;
   const chkDiezmo = document.getElementById('chk-diezmo');
   if (currentType === 'IN' && chkDiezmo && chkDiezmo.checked) {
@@ -1757,45 +1914,62 @@ function guardar() {
     if (diezmoApartado > 0) {
       diezmoTotal += diezmoApartado;
       const now2 = new Date();
-      diezmoHistorial.unshift({
-        fecha: fechaHN(now2),
-        desc: desc,
-        monto: diezmoApartado
-      });
+      diezmoHistorial.unshift({ fecha: fechaDisplay, desc: desc, monto: diezmoApartado });
       renderDiezmoHist();
-      toast(`Diezmo apartado (20%): L ${fmt(diezmoApartado)}`, 'diezmo');
+      toast(`Diezmo apartado (10%): L ${fmt(diezmoApartado)}`, 'diezmo');
     }
     chkDiezmo.checked = false;
     prevDiezmo();
   }
 
+  /* ─── OFRENDA porcentaje libre ─── */
+  let ofrendaApartada = 0;
+  const chkOfrenda = document.getElementById('chk-ofrenda');
+  const ofrendaPct = parseFloat(document.getElementById('ofrenda-pct').value) || 0;
+  if (currentType === 'IN' && chkOfrenda && chkOfrenda.checked && ofrendaPct > 0) {
+    ofrendaApartada = neto * ofrendaPct / 100;
+    if (ofrendaApartada > 0) {
+      ofrendaTotal += ofrendaApartada;
+      ofrendaHistorial.unshift({ fecha: fechaDisplay, desc: desc, monto: ofrendaApartada, pct: ofrendaPct });
+      renderOfrendaHist();
+      toast(`Ofrenda (${ofrendaPct}%): L ${fmt(ofrendaApartada)} apartada`, 'diezmo');
+    }
+    chkOfrenda.checked = false;
+    prevOfrenda();
+  }
+
   const now = new Date();
-  const fk  = hoyKey();
   const reg = {
     id: Date.now(),
-    fecha: fechaHN(now), fechaKey: fk,
+    fecha: fechaDisplay, fechaKey: fk,
     hora: horaHN(now),
     desc, neto, bruto, comision: com,
     costo, ganancia,
     diezmo: diezmoApartado,
+    ofrenda: ofrendaApartada,
     categoria, cliente, pagado,
+    observaciones: obs,
+    proyectoId, tipoMov,
     bancoId: bid, bancoNombre: sel.options[sel.selectedIndex].text,
     tipo: currentType
   };
   registros.unshift(reg);
 
-  /* ─── ENVÍO A GOOGLE SHEETS (sin bloquear la UI) ─── */
   enviarAGoogleSheets(reg);
 
   if (!sData[fk]) sData[fk] = {f:[], p:[], t:[]};
   sData[fk].f.push({v: neto, d: desc, t: currentType === 'IN' ? 'in' : 'out', fromCaja: true});
 
-  document.getElementById('reg-desc').value      = '';
-  document.getElementById('reg-monto').value     = '';
-  document.getElementById('reg-costo').value     = '';
-  document.getElementById('reg-cliente').value   = '';
-  document.getElementById('reg-categoria').value = '';
-  document.getElementById('reg-pagado').value    = 'Sí';
+  document.getElementById('reg-desc').value         = '';
+  document.getElementById('reg-monto').value        = '';
+  document.getElementById('reg-costo').value        = '';
+  document.getElementById('reg-cliente').value      = '';
+  document.getElementById('reg-categoria').value    = '';
+  document.getElementById('reg-pagado').value       = 'Sí';
+  document.getElementById('reg-obs').value          = '';
+  document.getElementById('reg-proyecto-id').value  = '';
+  document.getElementById('reg-tipo-mov').value     = 'normal';
+  document.getElementById('proyecto-resumen').style.display = 'none';
   document.getElementById('com-prev').classList.remove('show');
 
   actualizarLog(); calcular(); saveAll(); buildBancoFilter();
@@ -1828,6 +2002,130 @@ function renderDiezmoHist() {
   el.innerHTML = diezmoHistorial.slice(0,8).map(h =>
     `<div class="diezmo-hist-item">${h.fecha} — ${h.desc}: <span>${h.monto >= 0 ? '+' : ''}${fmt(h.monto)}</span></div>`
   ).join('');
+}
+
+/* ═══ OFRENDA ═══ */
+function ofrendaManual() {
+  const monto = parseFloat(prompt('¿Cuánto agregar a la ofrenda? (Lps)') || '0');
+  if (isNaN(monto) || monto <= 0) return;
+  ofrendaTotal += monto;
+  const now = new Date();
+  ofrendaHistorial.unshift({ fecha: fechaHN(now), desc: 'Manual', monto: monto, pct: 0 });
+  renderOfrendaHist(); calcular(); saveAll();
+  toast(`Ofrenda +L ${fmt(monto)}`);
+}
+
+function ofrendaEntregar() {
+  if (!confirm(`¿Marcar ofrenda como entregada?\nTotal: L ${fmt(ofrendaTotal)}\n\nEsto reseteará a 0.`)) return;
+  const now = new Date();
+  ofrendaHistorial.unshift({ fecha: fechaHN(now), desc: '✓ ENTREGADA', monto: -ofrendaTotal, pct: 0 });
+  ofrendaTotal = 0;
+  renderOfrendaHist(); calcular(); saveAll();
+  toast('Ofrenda marcada como entregada');
+}
+
+function renderOfrendaHist() {
+  const el = document.getElementById('ofrenda-hist');
+  if (!el) return;
+  if (!ofrendaHistorial.length) { el.innerHTML = ''; return; }
+  el.innerHTML = ofrendaHistorial.slice(0,8).map(h =>
+    `<div class="diezmo-hist-item">${h.fecha} — ${h.desc}${h.pct?` (${h.pct}%)`:''}:
+     <span style="color:#c084fc">${h.monto >= 0 ? '+' : ''}${fmt(h.monto)}</span></div>`
+  ).join('');
+  /* actualizar display */
+  const disp = document.getElementById('ofrenda-val');
+  if (disp) disp.value = fmt(ofrendaTotal);
+}
+
+/* ═══ CIERRE MENSUAL ═══ */
+function cierreMensual() {
+  const ahora = new Date();
+  const mes   = ahora.toLocaleDateString('es-HN', {month:'long', year:'numeric', timeZone: TZ});
+
+  const regs  = registros.filter(r => {
+    if (!r.fechaKey) return false;
+    const d = new Date(r.fechaKey + 'T12:00:00');
+    return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
+  });
+
+  const ingresos  = regs.filter(r => r.tipo === 'IN').reduce((a,b) => a + b.neto, 0);
+  const egresos   = regs.filter(r => r.tipo === 'OUT').reduce((a,b) => a + b.neto, 0);
+  const diezmos   = regs.reduce((a,b) => a + (b.diezmo || 0), 0);
+  const ofrendas  = regs.reduce((a,b) => a + (b.ofrenda || 0), 0);
+  const neto      = ingresos - egresos;
+
+  const resumen = `📅 CIERRE MENSUAL — ${mes.toUpperCase()}
+─────────────────────────────
+▲ Ingresos:   L ${fmt(ingresos)}
+▼ Egresos:    L ${fmt(egresos)}
+═ Neto:       L ${fmt(neto)}
+─────────────────────────────
+🙏 Diezmos:   L ${fmt(diezmos)}
+🎁 Ofrendas:  L ${fmt(ofrendas)}
+Total espiritual: L ${fmt(diezmos + ofrendas)}
+─────────────────────────────
+📦 Movimientos: ${regs.length}
+
+¿Deseas guardar este cierre en el historial?`;
+
+  if (!confirm(resumen)) return;
+
+  /* Guardar cierre como registro especial */
+  const cierreReg = {
+    id: Date.now(),
+    fecha: fechaHN(ahora), fechaKey: hoyKey(),
+    hora: horaHN(ahora),
+    desc: `[CIERRE] ${mes} · Ingresos L${fmt(ingresos)} | Egresos L${fmt(egresos)} | Neto L${fmt(neto)}`,
+    neto: 0, bruto: 0, comision: 0, diezmo: 0, ofrenda: 0,
+    categoria: 'Cierre Mensual', cliente: '', pagado: 'Sí',
+    tipo: 'IN', bancoId: '', bancoNombre: 'CIERRE',
+    esCierre: true,
+    cierreData: { mes, ingresos, egresos, neto, diezmos, ofrendas, totalMovs: regs.length }
+  };
+  registros.unshift(cierreReg);
+  enviarAGoogleSheets(cierreReg);
+  saveAll();
+  toast(`Cierre de ${mes} guardado ✓`);
+}
+
+/* ═══ ESTADO PAGADO DIEZMO/OFRENDA ═══ */
+let diezmoPagado  = false;
+let ofrendaPagada = false;
+
+function toggleDiezmoPagado() {
+  diezmoPagado = !diezmoPagado;
+  const badge = document.getElementById('diezmo-pagado-badge');
+  if (diezmoPagado) {
+    badge.textContent = '✅ PAGADO';
+    badge.style.background = 'var(--grn-bg)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = '#0a3a1a';
+    toast('Diezmo marcado como pagado ✓');
+  } else {
+    badge.textContent = '⏳ PENDIENTE';
+    badge.style.background = 'var(--pur-bg)';
+    badge.style.color = 'var(--purple)';
+    badge.style.borderColor = '#3a1a6e';
+  }
+  saveAll();
+}
+
+function toggleOfrendaPagada() {
+  ofrendaPagada = !ofrendaPagada;
+  const badge = document.getElementById('ofrenda-pagada-badge');
+  if (ofrendaPagada) {
+    badge.textContent = '✅ PAGADA';
+    badge.style.background = 'var(--grn-bg)';
+    badge.style.color = 'var(--green)';
+    badge.style.borderColor = '#0a3a1a';
+    toast('Ofrenda marcada como pagada ✓');
+  } else {
+    badge.textContent = '⏳ PENDIENTE';
+    badge.style.background = 'var(--pur-bg)';
+    badge.style.color = '#c084fc';
+    badge.style.borderColor = '#4a1a7e';
+  }
+  saveAll();
 }
 
 /* ═══ BOLSILLO ═══ */
@@ -1935,17 +2233,18 @@ function renderHistorial() {
     <div class="dgroup">${grupos[k][0].fecha}</div>
     <table class="htable">
       <thead><tr>
-        <th>Hora</th><th>Descripción</th><th>Cuenta</th><th>Com%</th><th>Diezmo</th><th>Tipo</th><th>Neto</th>
+        <th>Hora</th><th>Descripción</th><th>Cuenta</th><th>Proyecto</th><th>Diezmo</th><th>Ofrenda</th><th>Tipo</th><th>Neto</th>
       </tr></thead>
       <tbody>
         ${grupos[k].map(r => `<tr>
           <td style="font-family:var(--mono);color:var(--muted)">${r.hora}</td>
-          <td style="color:var(--text)">${r.desc}</td>
+          <td style="color:var(--text)">${r.desc}${r.observaciones?`<br><span style="font-size:.65rem;color:var(--muted)">${r.observaciones}</span>`:''}${r.tipoMov&&r.tipoMov!=='normal'?`<br><span style="font-size:.63rem;color:var(--blue)">${r.tipoMov}</span>`:''}</td>
           <td style="color:var(--muted);font-size:.73rem">${r.bancoNombre}</td>
-          <td style="font-family:var(--mono);color:${r.comision>0?'var(--amber)':'var(--dim)'}">
-            ${r.comision > 0 ? r.comision + '%' : '—'}</td>
+          <td style="font-family:var(--mono);color:var(--blue);font-size:.7rem">${r.proyectoId||'—'}</td>
           <td style="font-family:var(--mono);color:${r.diezmo>0?'var(--purple)':'var(--dim)'}">
             ${r.diezmo > 0 ? 'L '+fmt(r.diezmo) : '—'}</td>
+          <td style="font-family:var(--mono);color:${r.ofrenda>0?'#c084fc':'var(--dim)'}">
+            ${r.ofrenda > 0 ? 'L '+fmt(r.ofrenda) : '—'}</td>
           <td><span class="badge ${r.tipo==='IN'?'b-in':'b-out'}">${r.tipo}</span></td>
           <td style="font-family:var(--mono);font-weight:600;color:${r.tipo==='IN'?'var(--green)':'var(--red)'}">
             ${r.tipo==='IN'?'+':'−'}${fmt(r.neto)}</td>
@@ -1991,7 +2290,8 @@ function saveAll() {
   state['pocket-val']= document.getElementById('pocket-val').value;
   localStorage.setItem('cr_pro', JSON.stringify({registros, state}));
   localStorage.setItem('cr_sdata', JSON.stringify(sData));
-  localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial}));
+  localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial, pagado: diezmoPagado}));
+  localStorage.setItem('cr_ofrenda', JSON.stringify({total: ofrendaTotal, historial: ofrendaHistorial, pagada: ofrendaPagada}));
   invSave();
 }
 
@@ -2009,11 +2309,19 @@ function loadAll() {
   if (dz) {
     diezmoTotal     = dz.total     || 0;
     diezmoHistorial = dz.historial || [];
+    if (dz.pagado) { diezmoPagado = true; toggleDiezmoPagado(); diezmoPagado = true; }
+  }
+  const oz = JSON.parse(localStorage.getItem('cr_ofrenda') || 'null');
+  if (oz) {
+    ofrendaTotal     = oz.total     || 0;
+    ofrendaHistorial = oz.historial || [];
+    if (oz.pagada) { ofrendaPagada = true; toggleOfrendaPagada(); ofrendaPagada = true; }
   }
   calcular();
   actualizarLog();
   buildBancoFilter();
   renderDiezmoHist();
+  renderOfrendaHist();
 }
 
 /* ═══ EXPORTAR CSV ═══ */
