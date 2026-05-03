@@ -1016,11 +1016,24 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
             <span>Pendiente: <strong style="color:var(--amber)" id="proy-pendiente">L 0.00</strong></span>
           </div>
         </div>
-        <select id="reg-pagado" class="pi">
-          <option value="Sí">✅ Pagado</option>
-          <option value="Pendiente">⏳ Pendiente</option>
-          <option value="Parcial">🔸 Parcial</option>
-        </select>
+        <div class="pi-row" style="margin-bottom:6px">
+          <select id="reg-metodo-pago" class="pi" style="margin:0;flex:1;font-size:.77rem">
+            <option value="">💳 Método de pago...</option>
+            <option value="Efectivo">💵 Efectivo</option>
+            <option value="Transferencia">🏦 Transferencia</option>
+            <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+            <option value="Tarjeta Crédito">💳 Tarjeta Crédito</option>
+            <option value="Cheque">📄 Cheque</option>
+            <option value="Depósito">🏧 Depósito</option>
+            <option value="Pago Móvil">📱 Pago Móvil</option>
+            <option value="Otro">🔹 Otro</option>
+          </select>
+          <select id="reg-pagado" class="pi" style="margin:0;flex:1">
+            <option value="Sí">✅ Pagado</option>
+            <option value="Pendiente">⏳ Pendiente</option>
+            <option value="Parcial">🔸 Parcial</option>
+          </select>
+        </div>
         <!-- DIEZMO: checkbox manual, 10% -->
         <div class="diezmo-check-row" id="diezmo-row" style="display:none">
           <input type="checkbox" id="chk-diezmo" onchange="prevDiezmo()">
@@ -1977,6 +1990,7 @@ async function enviarAGoogleSheets(reg) {
     params.append('diezmosPagados',   diezmoPagado  ? 'Sí' : 'No');
     params.append('ofrendasPagadas',  ofrendaPagada ? 'Sí' : 'No');
     params.append('estadoPago',       reg.pagado             || 'Sí');
+    params.append('metodoPago',       reg.metodoPago         || '');
     params.append('observaciones',    reg.observaciones      || '');
 
     await fetch(GAS_URL, {
@@ -2050,6 +2064,7 @@ function guardar() {
   const categoria  = document.getElementById('reg-categoria').value.trim()     || '';
   const cliente    = document.getElementById('reg-cliente').value.trim()       || '';
   const pagado     = document.getElementById('reg-pagado').value               || 'Sí';
+  const metodoPago = document.getElementById('reg-metodo-pago').value          || '';
   const obs        = document.getElementById('reg-obs').value.trim()           || '';
   const proyectoId = document.getElementById('reg-proyecto-id').value.trim()   || '';
   const tipoMov    = document.getElementById('reg-tipo-mov').value             || 'normal';
@@ -2134,6 +2149,7 @@ function guardar() {
     observaciones: obs,
     proyectoId, tipoMov,
     tipoContacto: tipoContacto,
+    metodoPago: metodoPago,
     bancoId: bid, bancoNombre: sel.options[sel.selectedIndex].text,
     tipo: currentType
   };
@@ -2150,6 +2166,7 @@ function guardar() {
   document.getElementById('reg-cliente').value      = '';
   document.getElementById('reg-categoria').value    = '';
   document.getElementById('reg-pagado').value       = 'Sí';
+  document.getElementById('reg-metodo-pago').value  = '';
   document.getElementById('reg-obs').value          = '';
   document.getElementById('reg-proyecto-id').value  = '';
   document.getElementById('reg-tipo-mov').value     = 'normal';
