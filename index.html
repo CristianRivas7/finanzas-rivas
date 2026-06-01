@@ -974,6 +974,8 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
           </optgroup>
           <optgroup label="— General —">
             <option value="Transferencia">Transferencia</option>
+            <option value="Personal">👤 Personal</option>
+            <option value="Beneficencia">🤝 Beneficencia</option>
             <option value="Otros">Otros</option>
           </optgroup>
         </select>
@@ -999,7 +1001,9 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
           </div>
         </div>
         <div class="pi-row">
-          <input type="text" id="reg-proyecto-id" class="pi" placeholder="🔑 ID Proyecto / Factura (ej: P-001)" style="font-family:var(--mono);font-size:.77rem">
+          <select id="reg-proyecto-id" class="pi" style="font-family:var(--mono);font-size:.77rem;flex:1" onchange="toggleAdelantoSaldo()">
+            <option value="">📋 — Sin proyecto —</option>
+          </select>
           <select id="reg-tipo-mov" class="pi" style="flex:1;font-size:.73rem" onchange="toggleAdelantoSaldo()">
             <option value="normal">Movimiento normal</option>
             <option value="adelanto">💰 Adelanto recibido</option>
@@ -1821,6 +1825,7 @@ function boot() {
   const regFecha = document.getElementById('reg-fecha');
   if (regFecha) regFecha.value = workDate;
   inicializarSelectorCierre();
+  poblarSelectorProyectos();
   syncBadge();
 }
 
@@ -2063,10 +2068,26 @@ function actualizarGananciaIndicador() {
   }
 }
 
+/* ═══ POBLAR SELECTOR DE PROYECTOS ═══ */
+function poblarSelectorProyectos() {
+  const sel = document.getElementById('reg-proyecto-id');
+  if (!sel) return;
+  const val = sel.value; // guardar selección actual
+  sel.innerHTML = '<option value="">📋 — Sin proyecto —</option>';
+  proyectos.forEach(p => {
+    const estadoIcon = { activo:'🟢', pausado:'🟡', completado:'✅', cancelado:'🔴' };
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${estadoIcon[p.estado]||'📋'} ${p.nombre}${p.cliente ? ' · '+p.cliente : ''}`;
+    sel.appendChild(opt);
+  });
+  if (val) sel.value = val; // restaurar selección
+}
+
 /* ═══ MOSTRAR/OCULTAR CRÉDITO Y ADELANTO ═══ */
 function toggleAdelantoSaldo() {
   const tipo = document.getElementById('reg-tipo-mov').value;
-  const pid  = (document.getElementById('reg-proyecto-id').value || '').trim();
+  const pid  = document.getElementById('reg-proyecto-id').value || '';
   if (pid && tipo !== 'normal') mostrarResumenProyecto(pid);
   else document.getElementById('proyecto-resumen').style.display = 'none';
 }
@@ -2217,6 +2238,7 @@ function guardarProyecto() {
   saveAll();
   cerrarProyecto();
   renderProyectos();
+  poblarSelectorProyectos();
   toast(`Proyecto "${nombre}" guardado ✓`);
 }
 
@@ -2241,6 +2263,7 @@ function eliminarProyecto(id) {
   proyectos = proyectos.filter(x => x.id !== id);
   saveAll();
   renderProyectos();
+  poblarSelectorProyectos();
   toast('Proyecto eliminado', 'err');
 }
 
@@ -2543,7 +2566,6 @@ function guardar() {
   document.getElementById('reg-obs').value          = '';
   document.getElementById('reg-proyecto-id').value  = '';
   document.getElementById('reg-tipo-mov').value     = 'normal';
-  document.getElementById('proyecto-resumen').style.display = 'none';
   document.getElementById('com-prev').classList.remove('show');
   toggleClienteProv('cliente'); // reset a cliente por defecto
 
