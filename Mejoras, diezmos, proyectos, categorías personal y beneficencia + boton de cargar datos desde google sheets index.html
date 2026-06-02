@@ -1140,12 +1140,16 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div class="psec psec-top" style="border-top-color:var(--amber)">
         <div class="psec-title" style="border-left-color:var(--amber)">📅 Cierre Mensual</div>
         <p style="font-size:.7rem;color:var(--muted);margin-bottom:8px">Selecciona el mes y genera el cierre con ingresos, egresos, costos, ganancias, diezmos y ofrendas.</p>
+        <!-- Paso 1: Sincronizar -->
+        <button onclick="loadFromGAS()" style="width:100%;background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:7px;padding:7px;font-size:.72rem;cursor:pointer;font-family:var(--font);font-weight:800;margin-bottom:8px">
+          ☁ Paso 1: Cargar desde Google Sheets
+        </button>
         <!-- Selector de mes -->
         <div class="pi-row" style="margin-bottom:8px">
           <select id="cierre-mes" class="pi" style="margin:0;flex:1;font-size:.77rem"></select>
           <select id="cierre-anio" class="pi" style="margin:0;width:80px;font-size:.77rem"></select>
         </div>
-        <button class="btn-save" onclick="cierreMensual()" style="background:var(--amber);color:#080c10;margin-bottom:8px">📅 GENERAR CIERRE</button>
+        <button class="btn-save" onclick="cierreMensual()" style="background:var(--amber);color:#080c10;margin-bottom:8px">📅 Paso 2: Generar Cierre</button>
         <!-- Historial de cierres -->
         <div id="cierres-hist-wrap" style="display:none">
           <div style="font-size:.62rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;border-left:3px solid var(--amber);padding-left:7px">Historial de Cierres</div>
@@ -1775,28 +1779,67 @@ async function loadFromGAS() {
     const resp = await fetch(GAS_URL + '?action=load', { method: 'GET' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
-    if (data && data.registros) {
-      registros = data.registros || [];
-      diezmoTotal = data.diezmoTotal || 0;
-      diezmoHistorial = data.diezmoHistorial || [];
-      sData = data.sData || {};
-      // Restaurar saldos si vienen
-      if (data.saldos) {
-        for (const id in data.saldos) {
-          const el = document.getElementById(id);
-          if (el) el.value = data.saldos[id];
+    if (data && data.registros && data.registros.length > 0) {
+      /* Normalizar registros que vienen de Google Sheets */
+      const regsNormalizados = data.registros.map(r => {
+        /* Normalizar fechaKey — puede venir en varios formatos */
+        let fk = r.fechaKey || r.fecha || '';
+        /* Si viene como DD/MM/YYYY convertir a YYYY-MM-DD */
+        if (fk && fk.includes('/')) {
+          const parts = fk.split('/');
+          if (parts.length === 3) {
+            /* Detectar si es DD/MM/YYYY o MM/DD/YYYY */
+            const p0 = parseInt(parts[0]);
+            const p1 = parseInt(parts[1]);
+            if (p0 > 12) {
+              /* DD/MM/YYYY */
+              fk = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+            } else {
+              /* MM/DD/YYYY */
+              fk = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
+            }
+          }
         }
+        /* Si viene como objeto Date de Sheets */
+        if (fk && fk.toString().includes('T')) {
+          fk = fk.toString().split('T')[0];
+        }
+        return {
+          ...r,
+          fechaKey:    fk,
+          neto:        parseFloat(r.neto)     || parseFloat(r.montoBruto) || 0,
+          bruto:       parseFloat(r.bruto)    || parseFloat(r.montoBruto) || 0,
+          costo:       parseFloat(r.costo)    || 0,
+          ganancia:    parseFloat(r.ganancia) || 0,
+          diezmo:      parseFloat(r.diezmo)   || 0,
+          ofrenda:     parseFloat(r.ofrenda)  || 0,
+          tipo:        r.tipo || 'IN',
+          desc:        r.desc || r.descripcion || '',
+          bancoNombre: r.bancoNombre || r.cuenta || '',
+          esCierre:    (r.categoria === 'Cierre Mensual') || r.esCierre || false
+        };
+      });
+
+      /* Combinar con registros locales — evitar duplicados por ID */
+      const idsLocales = new Set(registros.map(r => String(r.id)));
+      const regsNuevos = regsNormalizados.filter(r => !idsLocales.has(String(r.id)));
+      if (regsNuevos.length > 0) {
+        registros = [...regsNuevos, ...registros];
+      } else if (registros.length === 0) {
+        registros = regsNormalizados;
       }
-      calcular(); actualizarLog(); buildBancoFilter(); renderDiezmoHist();
-      statusEl.textContent = '✓ GAS: Cargado';
+
+      calcular(); actualizarLog(); buildBancoFilter();
+      renderDiezmoHist(); renderOfrendaHist(); renderProyectos();
+      saveAll();
+      statusEl.textContent = `✓ GAS: ${registros.length} registros`;
       statusEl.className = 'gas-status ok';
-      toast('Datos cargados desde Google Sheets ✓');
+      toast(`✓ ${regsNuevos.length > 0 ? regsNuevos.length + ' registros nuevos cargados' : 'Sincronizado con Google Sheets'}`);
     } else {
       statusEl.textContent = '⚡ GAS: Listo';
       statusEl.className = 'gas-status ok';
     }
   } catch (e) {
-    // GAS no disponible o sin datos remotos — usar localStorage normal
     statusEl.textContent = '⚡ GAS: Local';
     statusEl.className = 'gas-status';
     console.warn('GAS load fallback to localStorage:', e);
@@ -2703,10 +2746,23 @@ function cierreMensual() {
                     'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre = meses[mesIdx] + ' ' + anio;
 
-  /* Filtrar registros del mes/año seleccionado */
+  /* Filtrar registros del mes/año seleccionado — tolerante a formatos */
   const regs = registros.filter(r => {
-    if (!r.fechaKey || r.esCierre) return false;
-    const d = new Date(r.fechaKey + 'T12:00:00');
+    if (r.esCierre) return false;
+    /* Intentar con fechaKey primero */
+    let fk = r.fechaKey || '';
+    /* Si no hay fechaKey, intentar parsear r.fecha (DD/MM/YYYY) */
+    if (!fk && r.fecha) {
+      const parts = r.fecha.split('/');
+      if (parts.length === 3) {
+        fk = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+      }
+    }
+    if (!fk) return false;
+    /* Normalizar si tiene T */
+    if (fk.includes('T')) fk = fk.split('T')[0];
+    const d = new Date(fk + 'T12:00:00');
+    if (isNaN(d.getTime())) return false;
     return d.getMonth() === mesIdx && d.getFullYear() === anio;
   });
 
