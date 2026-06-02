@@ -2027,13 +2027,25 @@ function calcGananciaPreview() {
 function prevDiezmo() {
   const chk  = document.getElementById('chk-diezmo');
   const prev = document.getElementById('diezmo-preview');
-  const { ganancia } = calcGananciaPreview();
-  if (chk && chk.checked && ganancia > 0) {
-    prev.textContent = 'L ' + (ganancia * DIEZMO_PCT).toFixed(2);
+  const pct  = parseFloat(document.getElementById('diezmo-pct') ? document.getElementById('diezmo-pct').value : 10) || 10;
+  const { monto, costo, ganancia } = calcGananciaPreview();
+
+  if (chk && chk.checked) {
+    if (monto > 0) {
+      const soloMonto     = monto * pct / 100;
+      const sobreGanancia = ganancia * pct / 100;
+      if (costo > 0) {
+        prev.innerHTML = `<span style="color:var(--purple)">L ${sobreGanancia.toFixed(2)}</span>
+          <span style="font-size:.62rem;color:var(--dim)"> (ganancia) / L ${soloMonto.toFixed(2)} (todo)</span>`;
+      } else {
+        prev.textContent = 'L ' + soloMonto.toFixed(2);
+      }
+    } else {
+      prev.textContent = 'L 0.00';
+    }
   } else if (prev) {
     prev.textContent = 'L 0.00';
   }
-  /* Actualizar indicador de ganancia en tiempo real */
   actualizarGananciaIndicador();
 }
 
@@ -2042,9 +2054,21 @@ function prevOfrenda() {
   const chk  = document.getElementById('chk-ofrenda');
   const prev = document.getElementById('ofrenda-preview');
   const pct  = parseFloat(document.getElementById('ofrenda-pct').value) || 0;
-  const { ganancia } = calcGananciaPreview();
-  if (chk && chk.checked && ganancia > 0 && pct > 0) {
-    prev.textContent = 'L ' + (ganancia * pct / 100).toFixed(2);
+  const { monto, costo, ganancia } = calcGananciaPreview();
+
+  if (chk && chk.checked && pct > 0) {
+    if (monto > 0) {
+      const soloMonto     = monto * pct / 100;
+      const sobreGanancia = ganancia * pct / 100;
+      if (costo > 0) {
+        prev.innerHTML = `<span style="color:#c084fc">L ${sobreGanancia.toFixed(2)}</span>
+          <span style="font-size:.62rem;color:var(--dim)"> (ganancia) / L ${soloMonto.toFixed(2)} (todo)</span>`;
+      } else {
+        prev.textContent = 'L ' + soloMonto.toFixed(2);
+      }
+    } else {
+      prev.textContent = 'L 0.00';
+    }
   } else if (prev) {
     prev.textContent = 'L 0.00';
   }
@@ -2645,6 +2669,9 @@ function inicializarSelectorCierre() {
   const selAnio = document.getElementById('cierre-anio');
   if (!selMes || !selAnio) return;
 
+  /* Solo inicializar si están vacíos */
+  if (selMes.options.length > 0 && selAnio.options.length > 0) return;
+
   const ahora = new Date();
   selMes.innerHTML  = meses.map((m,i) =>
     `<option value="${i}"${i===ahora.getMonth()?' selected':''}>${m}</option>`
@@ -2657,12 +2684,23 @@ function inicializarSelectorCierre() {
 }
 
 function cierreMensual() {
+  /* Asegurar que los selectores estén inicializados */
+  inicializarSelectorCierre();
+
   const selMes  = document.getElementById('cierre-mes');
   const selAnio = document.getElementById('cierre-anio');
-  const mesIdx  = parseInt(selMes.value);
-  const anio    = parseInt(selAnio.value);
-  const meses   = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                   'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+  /* Si los selectores están vacíos usar mes/año actual */
+  const ahora  = new Date();
+  const mesIdx = selMes && selMes.value !== '' ? parseInt(selMes.value) : ahora.getMonth();
+  const anio   = selAnio && selAnio.value !== '' ? parseInt(selAnio.value) : ahora.getFullYear();
+
+  if (isNaN(mesIdx) || isNaN(anio)) {
+    toast('Error al obtener mes/año', 'err'); return;
+  }
+
+  const meses    = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                    'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre = meses[mesIdx] + ' ' + anio;
 
   /* Filtrar registros del mes/año seleccionado */
@@ -2671,6 +2709,10 @@ function cierreMensual() {
     const d = new Date(r.fechaKey + 'T12:00:00');
     return d.getMonth() === mesIdx && d.getFullYear() === anio;
   });
+
+  if (regs.length === 0) {
+    toast(`Sin registros en ${mesNombre}`, 'warn');
+  }
 
   const ingresos = regs.filter(r => r.tipo==='IN').reduce((a,b) => a+(b.neto||0), 0);
   const egresos  = regs.filter(r => r.tipo==='OUT').reduce((a,b) => a+(b.neto||0), 0);
