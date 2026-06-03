@@ -2792,18 +2792,50 @@ function cierreMensual() {
   /* Filtrar registros del mes/año seleccionado — tolerante a formatos */
   const regs = registros.filter(r => {
     if (r.esCierre) return false;
-    /* Intentar con fechaKey primero */
-    let fk = r.fechaKey || '';
-    /* Si no hay fechaKey, intentar parsear r.fecha (DD/MM/YYYY) */
-    if (!fk && r.fecha) {
-      const parts = r.fecha.split('/');
-      if (parts.length === 3) {
-        fk = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
+
+    /* Intentar todas las fuentes de fecha disponibles */
+    let fk = '';
+
+    /* 1. fechaKey puede ser YYYY-MM-DD o DD/MM/YYYY */
+    if (r.fechaKey) {
+      fk = String(r.fechaKey).trim();
+      /* Si tiene T, quitar la parte de tiempo */
+      if (fk.includes('T')) fk = fk.split('T')[0];
+      /* Si es DD/MM/YYYY convertir a YYYY-MM-DD */
+      if (fk.includes('/')) {
+        const p = fk.split('/');
+        if (p.length === 3) {
+          /* Detectar formato: si primer segmento > 12 es DD/MM/YYYY */
+          if (parseInt(p[0]) > 12) {
+            fk = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          } else {
+            fk = `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+          }
+        }
       }
     }
+
+    /* 2. Si no tenemos fechaKey válida, usar r.fecha (DD/MM/YYYY) */
+    if (!fk && r.fecha) {
+      const f = String(r.fecha).trim();
+      if (f.includes('/')) {
+        const p = f.split('/');
+        if (p.length === 3) {
+          if (parseInt(p[0]) > 12) {
+            fk = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+          } else {
+            fk = `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+          }
+        }
+      } else if (f.includes('T')) {
+        fk = f.split('T')[0];
+      } else {
+        fk = f;
+      }
+    }
+
     if (!fk) return false;
-    /* Normalizar si tiene T */
-    if (fk.includes('T')) fk = fk.split('T')[0];
+
     const d = new Date(fk + 'T12:00:00');
     if (isNaN(d.getTime())) return false;
     return d.getMonth() === mesIdx && d.getFullYear() === anio;
