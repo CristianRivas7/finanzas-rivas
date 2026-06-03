@@ -1144,6 +1144,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         <button onclick="loadFromGAS()" style="width:100%;background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:7px;padding:7px;font-size:.72rem;cursor:pointer;font-family:var(--font);font-weight:800;margin-bottom:8px">
           ☁ Paso 1: Cargar desde Google Sheets
         </button>
+        <button onclick="diagnosticarRegistros()" style="width:100%;background:var(--s3);border:1px solid var(--bd);color:var(--muted);border-radius:7px;padding:6px;font-size:.7rem;cursor:pointer;font-family:var(--font);font-weight:700;margin-bottom:6px">🔍 Diagnóstico — Ver mis registros</button>
         <!-- Selector de mes -->
         <div class="pi-row" style="margin-bottom:8px">
           <select id="cierre-mes" class="pi" style="margin:0;flex:1;font-size:.77rem"></select>
@@ -1715,7 +1716,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwlN1WFi99eldZaJK2emi8Qa0Xj7XnAWqK6lVtzbOnOR-iQDtVnkpl9AQHwIBTwEDiepg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-ey6wcNfCFVdnhvkSbwIinEaZV0aSV5ZlTJ35UPJQfpOcIcixCZCkaYrsxTdA_Ezk/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -2499,6 +2500,29 @@ function eliminarRegistro(id) {
   renderHistorial();
   calcular();
   toast('Registro eliminado', 'err');
+}
+
+/* ═══ DIAGNÓSTICO DE REGISTROS ═══ */
+function diagnosticarRegistros() {
+  const total = registros.length;
+  if (total === 0) {
+    alert('⚠ No hay registros en el sistema.\n\nSus datos están en Google Sheets pero no en este navegador.\n\nUse el botón "Exportar CSV" en la barra superior, luego importe ese archivo.');
+    return;
+  }
+  const muestra = registros.slice(0,5).map(r =>
+    `• "${r.fecha}" | key:"${r.fechaKey}"`
+  ).join('\n');
+  const porMes = {};
+  registros.forEach(r => {
+    const fk = normalizarFechaKey(r.fechaKey || r.fecha || '');
+    if (fk) {
+      const key = fk.substring(0,7);
+      porMes[key] = (porMes[key]||0) + 1;
+    }
+  });
+  const resumen = Object.keys(porMes).sort().reverse()
+    .map(k=>`  ${k}: ${porMes[k]} registros`).join('\n');
+  alert(`📊 DIAGNÓSTICO\n\nTotal: ${total} registros\n\nUltimas fechas:\n${muestra}\n\nPor mes:\n${resumen}`);
 }
 
 function normalizarFechaKey(fk) {
