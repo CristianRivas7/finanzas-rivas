@@ -1979,9 +1979,21 @@ function calcular() {
   const mesAct  = ahora.getMonth();
   const anioAct = ahora.getFullYear();
   const regsMes = registros.filter(r => {
-    if (!r.fechaKey) return false;
-    const d = new Date(r.fechaKey + 'T12:00:00');
-    return d.getMonth() === mesAct && d.getFullYear() === anioAct;
+    let fk = (r.fechaKey && r.fechaKey !== 'undefined') ? String(r.fechaKey) : '';
+    if (!fk && r.fecha) {
+      const f = String(r.fecha).trim();
+      if (f.includes('T')) fk = f.split('T')[0];
+      else if (f.includes('/')) {
+        const p = f.split('/');
+        if (p.length === 3) fk = parseInt(p[0]) > 12
+          ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`
+          : `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
+      } else fk = f;
+    }
+    if (!fk) return false;
+    if (fk.includes('T')) fk = fk.split('T')[0];
+    const d = new Date(fk + 'T12:00:00');
+    return !isNaN(d.getTime()) && d.getMonth() === mesAct && d.getFullYear() === anioAct;
   });
   const totalIngresos = regsMes.filter(r => r.tipo === 'IN').reduce((a,b) => a + (b.neto || 0), 0);
   const totalCostos   = regsMes.filter(r => r.tipo === 'IN').reduce((a,b) => a + (b.costo || 0), 0);
@@ -2793,49 +2805,42 @@ function cierreMensual() {
   const regs = registros.filter(r => {
     if (r.esCierre) return false;
 
-    /* Intentar todas las fuentes de fecha disponibles */
     let fk = '';
 
-    /* 1. fechaKey puede ser YYYY-MM-DD o DD/MM/YYYY */
-    if (r.fechaKey) {
+    /* 1. fechaKey puede ser undefined, YYYY-MM-DD, DD/MM/YYYY, o ISO */
+    if (r.fechaKey && r.fechaKey !== 'undefined') {
       fk = String(r.fechaKey).trim();
-      /* Si tiene T, quitar la parte de tiempo */
       if (fk.includes('T')) fk = fk.split('T')[0];
-      /* Si es DD/MM/YYYY convertir a YYYY-MM-DD */
       if (fk.includes('/')) {
         const p = fk.split('/');
         if (p.length === 3) {
-          /* Detectar formato: si primer segmento > 12 es DD/MM/YYYY */
-          if (parseInt(p[0]) > 12) {
-            fk = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-          } else {
-            fk = `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
-          }
+          fk = parseInt(p[0]) > 12
+            ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`
+            : `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
         }
       }
     }
 
-    /* 2. Si no tenemos fechaKey válida, usar r.fecha (DD/MM/YYYY) */
+    /* 2. Si fechaKey no sirve, usar r.fecha */
     if (!fk && r.fecha) {
       const f = String(r.fecha).trim();
-      if (f.includes('/')) {
+      if (f.includes('T')) {
+        /* Formato ISO: 2026-05-04T06:00:00.000Z */
+        fk = f.split('T')[0];
+      } else if (f.includes('/')) {
+        /* Formato DD/MM/YYYY */
         const p = f.split('/');
         if (p.length === 3) {
-          if (parseInt(p[0]) > 12) {
-            fk = `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-          } else {
-            fk = `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
-          }
+          fk = parseInt(p[0]) > 12
+            ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`
+            : `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
         }
-      } else if (f.includes('T')) {
-        fk = f.split('T')[0];
       } else {
         fk = f;
       }
     }
 
     if (!fk) return false;
-
     const d = new Date(fk + 'T12:00:00');
     if (isNaN(d.getTime())) return false;
     return d.getMonth() === mesIdx && d.getFullYear() === anio;
