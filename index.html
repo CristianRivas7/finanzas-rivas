@@ -878,6 +878,8 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="pat-right">
     <button class="top-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
     <button class="top-btn" onclick="syncGAS()">☁ Sincronizar</button>
+    <button class="top-btn" onclick="cierreDiario()" style="border-color:var(--green);color:var(--green)">📆 Cierre Día</button>
+    <button class="top-btn" onclick="cierreSemanal()" style="border-color:var(--blue);color:var(--blue)">📊 Cierre Semana</button>
     <button class="top-btn" onclick="cierreMensual()" style="border-color:var(--amber);color:var(--amber)">📅 Cierre Mes</button>
     <div style="position:relative;display:inline-block" id="adv-wrap">
       <button class="top-btn" onclick="toggleAdvMenu()" title="Opciones avanzadas" style="padding:4px 8px;font-size:.7rem">⚙️</button>
@@ -1562,8 +1564,35 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         <option value="activo">🟢 Activo</option>
         <option value="pausado">🟡 Pausado</option>
         <option value="completado">✅ Completado</option>
+        <option value="finiquitado">💰 Finiquitado</option>
         <option value="cancelado">🔴 Cancelado</option>
       </select>
+      <!-- CAMPOS FINANCIEROS DEL PROYECTO -->
+      <div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:10px;display:flex;flex-direction:column;gap:7px">
+        <div style="font-size:.6rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px">💵 Finanzas del Proyecto</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>
+            <label style="font-size:.62rem;color:var(--muted);font-weight:700;display:block;margin-bottom:3px">Monto Total (Lps)</label>
+            <input type="number" id="proy-monto" class="pi" placeholder="0.00" min="0" step="0.01" style="margin:0;background:var(--lps-bg);color:var(--lps-fg);border-color:var(--lps-bd)">
+          </div>
+          <div>
+            <label style="font-size:.62rem;color:var(--amber);font-weight:700;display:block;margin-bottom:3px">Abono Recibido (Lps)</label>
+            <input type="number" id="proy-abono" class="pi" placeholder="0.00" min="0" step="0.01" style="margin:0;background:var(--amb-bg);color:var(--amber);border-color:#3d2a00" oninput="calcProyModal()">
+          </div>
+          <div>
+            <label style="font-size:.62rem;color:var(--red);font-weight:700;display:block;margin-bottom:3px">Costo/Gasto (Lps)</label>
+            <input type="number" id="proy-costo" class="pi" placeholder="0.00" min="0" step="0.01" style="margin:0;background:var(--red-bg);color:var(--red);border-color:#3d0a0a" oninput="calcProyModal()">
+          </div>
+          <div>
+            <label style="font-size:.62rem;color:var(--green);font-weight:700;display:block;margin-bottom:3px">Ganancia Estimada</label>
+            <input type="number" id="proy-ganancia" class="pi" placeholder="0.00" step="0.01" readonly style="margin:0;background:var(--grn-bg);color:var(--green);border-color:#0a3a1a;cursor:default">
+          </div>
+        </div>
+        <!-- Saldo pendiente (calculado) -->
+        <div id="proy-saldo-preview" style="display:none;background:var(--blue-bg);border:1px solid var(--bd2);border-radius:5px;padding:6px 9px;font-size:.72rem;font-family:var(--mono)">
+          <span style="color:var(--muted)">Saldo por cobrar: </span><span id="proy-saldo-val" style="color:var(--blue);font-weight:700">L 0.00</span>
+        </div>
+      </div>
       <textarea id="proy-desc" class="pi" placeholder="Descripción del proyecto..." rows="2" style="margin:0;resize:vertical;font-size:.77rem"></textarea>
     </div>
     <div class="modal-btns" style="margin-top:12px">
@@ -1622,6 +1651,19 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
           <option value="Pendiente">⏳ Pendiente</option>
           <option value="Parcial">🔸 Parcial</option>
         </select>
+      </div>
+      <!-- Diezmo y Ofrenda editables -->
+      <div style="display:flex;gap:6px">
+        <div style="flex:1;background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:6px;padding:7px 9px">
+          <div style="font-size:.6rem;color:var(--purple);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">🙏 Diezmo (Lps)</div>
+          <input type="number" id="edit-diezmo" class="pi" placeholder="0.00" min="0" step="0.01"
+            style="margin:0;background:var(--bg);border-color:#3a1a6e;color:var(--purple);font-family:var(--mono)">
+        </div>
+        <div style="flex:1;background:var(--pur-bg);border:1px solid #4a1a7e;border-radius:6px;padding:7px 9px">
+          <div style="font-size:.6rem;color:#c084fc;font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">🎁 Ofrenda (Lps)</div>
+          <input type="number" id="edit-ofrenda" class="pi" placeholder="0.00" min="0" step="0.01"
+            style="margin:0;background:var(--bg);border-color:#4a1a7e;color:#c084fc;font-family:var(--mono)">
+        </div>
       </div>
       <textarea id="edit-obs" class="pi" placeholder="Observaciones..." rows="2" style="margin:0;resize:vertical;font-size:.77rem"></textarea>
     </div>
@@ -1683,6 +1725,120 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <div class="modal-btns">
       <button class="mbtn-cancel" onclick="closeCierreModal()">Cerrar</button>
       <button class="mbtn-ok" style="background:var(--amber);color:#080c10" onclick="guardarCierre()">💾 Guardar Cierre</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CIERRE DIARIO -->
+<div class="overlay" id="modal-cierre-diario" onclick="if(event.target===this)closeCierreDiarioModal()">
+  <div class="modal" style="max-width:480px;width:95%">
+    <h3 style="color:var(--green);margin-bottom:4px">📆 Cierre Diario</h3>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:12px" id="cd-fecha-label">—</div>
+    <div style="background:var(--s3);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▲ Ingresos</div>
+          <div style="font-family:var(--mono);color:var(--green);font-size:.95rem;font-weight:600" id="cd-ingresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▼ Egresos</div>
+          <div style="font-family:var(--mono);color:var(--red);font-size:.95rem;font-weight:600" id="cd-egresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🔩 Costos</div>
+          <div style="font-family:var(--mono);color:var(--orange);font-size:.95rem;font-weight:600" id="cd-costos">L 0.00</div>
+        </div>
+        <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📈 Ganancia</div>
+          <div style="font-family:var(--mono);font-size:.95rem;font-weight:700" id="cd-ganancia">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🙏 Diezmos</div>
+          <div style="font-family:var(--mono);color:var(--purple);font-size:.95rem" id="cd-diezmos">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #4a1a7e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🎁 Ofrendas</div>
+          <div style="font-family:var(--mono);color:#c084fc;font-size:.95rem" id="cd-ofrendas">L 0.00</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--bd2);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Neto del Día</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;font-weight:700" id="cd-neto">L 0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Movimientos</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;color:var(--blue)" id="cd-movs">0</div>
+        </div>
+      </div>
+      <!-- Desglose por categoría -->
+      <div id="cd-categorias" style="margin-top:9px;border-top:1px dashed var(--bd2);padding-top:9px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeCierreDiarioModal()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--green);color:#080c10" onclick="guardarCierreDiario()">💾 Guardar Cierre</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CIERRE SEMANAL -->
+<div class="overlay" id="modal-cierre-semanal" onclick="if(event.target===this)closeCierreSemanalModal()">
+  <div class="modal" style="max-width:500px;width:95%">
+    <h3 style="color:var(--blue);margin-bottom:4px">📊 Cierre Semanal</h3>
+    <div style="font-size:.72rem;color:var(--muted);margin-bottom:8px" id="cs-fecha-label">—</div>
+    <!-- Selector de semana -->
+    <div style="display:flex;gap:6px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:.68rem;color:var(--muted);font-weight:700">Semana que inicia:</span>
+      <input type="date" id="cs-desde" class="pi" style="margin:0;flex:1;min-width:130px" onchange="recalcCierreSemanal()">
+      <input type="date" id="cs-hasta" class="pi" style="margin:0;flex:1;min-width:130px" onchange="recalcCierreSemanal()">
+    </div>
+    <div style="background:var(--s3);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▲ Ingresos</div>
+          <div style="font-family:var(--mono);color:var(--green);font-size:.95rem;font-weight:600" id="cs-ingresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">▼ Egresos</div>
+          <div style="font-family:var(--mono);color:var(--red);font-size:.95rem;font-weight:600" id="cs-egresos">L 0.00</div>
+        </div>
+        <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🔩 Costos</div>
+          <div style="font-family:var(--mono);color:var(--orange);font-size:.95rem;font-weight:600" id="cs-costos">L 0.00</div>
+        </div>
+        <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">📈 Ganancia</div>
+          <div style="font-family:var(--mono);font-size:.95rem;font-weight:700" id="cs-ganancia">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🙏 Diezmos</div>
+          <div style="font-family:var(--mono);color:var(--purple);font-size:.95rem" id="cs-diezmos">L 0.00</div>
+        </div>
+        <div style="background:var(--pur-bg);border:1px solid #4a1a7e;border-radius:6px;padding:8px;text-align:center">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">🎁 Ofrendas</div>
+          <div style="font-family:var(--mono);color:#c084fc;font-size:.95rem" id="cs-ofrendas">L 0.00</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--bd2);margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Neto Semana</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;font-weight:700" id="cs-neto">L 0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Margen</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;color:var(--amber)" id="cs-margen">0%</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Movimientos</div>
+          <div style="font-family:var(--mono);font-size:1.15rem;color:var(--blue)" id="cs-movs">0</div>
+        </div>
+      </div>
+      <!-- Resumen diario de la semana -->
+      <div id="cs-dias" style="margin-top:9px;border-top:1px dashed var(--bd2);padding-top:9px"></div>
+    </div>
+    <div class="modal-btns">
+      <button class="mbtn-cancel" onclick="closeCierreSemanalModal()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--blue);color:#080c10" onclick="guardarCierreSemanal()">💾 Guardar Cierre</button>
     </div>
   </div>
 </div>
@@ -1766,6 +1922,11 @@ async function syncGAS() {
     statusEl.textContent = '✓ GAS: Sincronizado';
     statusEl.className = 'gas-status ok';
     toast('Datos enviados a Google Sheets ✓');
+    // También vaciar cola de pendientes
+    if (gasQueue.length > 0) {
+      toast(`Enviando ${gasQueue.length} registro(s) pendientes...`, 'warn');
+      flushGasQueue();
+    }
   } catch (e) {
     statusEl.textContent = '✗ GAS: Error';
     statusEl.className = 'gas-status err';
@@ -2186,15 +2347,30 @@ function mostrarResumenProyecto(pid) {
 }
 
 /* ═══════════════════════════════════════════
-   ENVÍO A GOOGLE SHEETS — 12 CAMPOS EXACTOS
+   ENVÍO A GOOGLE SHEETS — CON COLA DE REINTENTOS
    ═══════════════════════════════════════════ */
+let gasQueue = [];
+let gasRetrying = false;
+
+async function flushGasQueue() {
+  if (gasRetrying || gasQueue.length === 0) return;
+  gasRetrying = true;
+  while (gasQueue.length > 0) {
+    const item = gasQueue[0];
+    try {
+      await fetch(GAS_URL, { method:'POST', mode:'no-cors', body: item.params });
+      gasQueue.shift(); // éxito — remover de la cola
+    } catch(e) {
+      break; // sin conexión — dejar en cola y reintentar luego
+    }
+  }
+  gasRetrying = false;
+  if (gasQueue.length > 0) {
+    setTimeout(flushGasQueue, 30000); // reintentar en 30 seg
+  }
+}
+
 async function enviarAGoogleSheets(reg) {
-  /* ─────────────────────────────────────────────────────────────────
-     IMPORTANTE: Con mode:'no-cors' el navegador solo permite peticiones
-     "simples". Eso significa SIN cabeceras personalizadas y body como
-     URLSearchParams (application/x-www-form-urlencoded), NO JSON.
-     El GAS recibe los datos vía e.parameter.CAMPO en doPost(e).
-  ───────────────────────────────────────────────────────────────── */
   const statusEl = document.getElementById('gas-status');
   try {
     const params = new URLSearchParams();
@@ -2227,20 +2403,48 @@ async function enviarAGoogleSheets(reg) {
     params.append('metodoPago',       reg.metodoPago         || '');
     params.append('observaciones',    reg.observaciones      || '');
 
+    statusEl.textContent = '⏳ Enviando...';
+    statusEl.className   = 'gas-status';
+
     await fetch(GAS_URL, {
       method: 'POST',
-      mode:   'no-cors',   // no-cors requiere body "simple" — URLSearchParams cumple eso
-      body:   params       // sin header Content-Type: el navegador lo pone automático como form
+      mode:   'no-cors',
+      body:   params
     });
 
     // Con no-cors nunca podemos leer la respuesta, pero si no lanzó error = la petición salió
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
+
+    // Intentar vaciar cola de pendientes
+    if (gasQueue.length > 0) flushGasQueue();
+
   } catch (e) {
     console.warn('GAS envío falló (sin conexión):', e);
-    statusEl.textContent = '✗ GAS: Sin conexión';
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length+1} pendientes)`;
     statusEl.className   = 'gas-status err';
-    toast('Sin internet — guardado solo local ✓', 'warn');
+    // Guardar en cola para reintento automático
+    const params2 = new URLSearchParams();
+    params2.append('action','registro');
+    params2.append('id', String(reg.id));
+    params2.append('fecha', reg.fecha||''); params2.append('hora', reg.hora||'');
+    params2.append('descripcion', reg.desc||'');
+    params2.append('cliente', reg.tipoContacto==='cliente'?(reg.cliente||''):'');
+    params2.append('proveedor', reg.tipoContacto==='proveedor'?(reg.cliente||''):'');
+    params2.append('categoria', reg.categoria||''); params2.append('tipo', reg.tipo||'');
+    params2.append('montoBruto', (reg.bruto||reg.neto||0).toFixed(2));
+    params2.append('costo', (reg.costo||0).toFixed(2)); params2.append('ganancia', (reg.ganancia||0).toFixed(2));
+    params2.append('comision', (reg.comision||0).toFixed(2)); params2.append('cuenta', reg.bancoNombre||'');
+    params2.append('anticipo', reg.tipoMov==='adelanto'?(reg.neto||0).toFixed(2):'0.00');
+    params2.append('saldos', reg.tipoMov==='saldo'?(reg.neto||0).toFixed(2):'0.00');
+    params2.append('neto', (reg.neto||0).toFixed(2));
+    params2.append('diezmos', (reg.diezmo||0).toFixed(2)); params2.append('ofrendas', (reg.ofrenda||0).toFixed(2));
+    params2.append('diezmosPagados', diezmoPagado?'Sí':'No'); params2.append('ofrendasPagadas', ofrendaPagada?'Sí':'No');
+    params2.append('estadoPago', reg.pagado||'Sí'); params2.append('metodoPago', reg.metodoPago||'');
+    params2.append('observaciones', reg.observaciones||'');
+    gasQueue.push({ params: params2, reg });
+    toast('Sin internet — guardado local. Se enviará al reconectar ✓', 'warn');
+    setTimeout(flushGasQueue, 15000);
   }
 }
 
@@ -2276,6 +2480,22 @@ function toggleClienteProv(tipo) {
    MÓDULO DE PROYECTOS
    ═══════════════════════════════════════════ */
 
+function calcProyModal() {
+  const monto  = parseFloat(document.getElementById('proy-monto').value)  || 0;
+  const abono  = parseFloat(document.getElementById('proy-abono').value)  || 0;
+  const costo  = parseFloat(document.getElementById('proy-costo').value)  || 0;
+  const gan    = monto - costo;
+  document.getElementById('proy-ganancia').value = gan > 0 ? gan.toFixed(2) : '0.00';
+  const saldo  = monto - abono;
+  const prev   = document.getElementById('proy-saldo-preview');
+  if (monto > 0) {
+    document.getElementById('proy-saldo-val').textContent = 'L ' + fmt(Math.max(0, saldo));
+    prev.style.display = 'block';
+  } else {
+    prev.style.display = 'none';
+  }
+}
+
 function abrirNuevoProyecto() {
   document.getElementById('proy-edit-id').value    = '';
   document.getElementById('proy-nombre').value     = '';
@@ -2284,6 +2504,11 @@ function abrirNuevoProyecto() {
   document.getElementById('proy-fecha-fin').value  = '';
   document.getElementById('proy-estado').value     = 'activo';
   document.getElementById('proy-desc').value       = '';
+  document.getElementById('proy-monto').value      = '';
+  document.getElementById('proy-abono').value      = '';
+  document.getElementById('proy-costo').value      = '';
+  document.getElementById('proy-ganancia').value   = '';
+  document.getElementById('proy-saldo-preview').style.display = 'none';
   document.getElementById('modal-proy-titulo').textContent = 'Nuevo Proyecto';
   document.getElementById('modal-proyecto').classList.add('open');
 }
@@ -2297,6 +2522,9 @@ function guardarProyecto() {
   if (!nombre) { toast('Escribe el nombre del proyecto', 'err'); return; }
 
   const editId = document.getElementById('proy-edit-id').value;
+  const monto  = parseFloat(document.getElementById('proy-monto').value)  || 0;
+  const abono  = parseFloat(document.getElementById('proy-abono').value)  || 0;
+  const costo  = parseFloat(document.getElementById('proy-costo').value)  || 0;
   const proy = {
     id:          editId || ('P-' + Date.now()),
     nombre,
@@ -2305,6 +2533,11 @@ function guardarProyecto() {
     fechaFin:    document.getElementById('proy-fecha-fin').value          || '',
     estado:      document.getElementById('proy-estado').value             || 'activo',
     desc:        document.getElementById('proy-desc').value.trim()        || '',
+    monto,
+    abono,
+    costo,
+    ganancia:    Math.max(0, monto - costo),
+    saldo:       Math.max(0, monto - abono),
     fechaCreado: editId ? undefined : fechaHN(new Date())
   };
 
@@ -2332,7 +2565,11 @@ function editarProyecto(id) {
   document.getElementById('proy-fecha-fin').value   = p.fechaFin     || '';
   document.getElementById('proy-estado').value      = p.estado       || 'activo';
   document.getElementById('proy-desc').value        = p.desc         || '';
+  document.getElementById('proy-monto').value       = p.monto        || '';
+  document.getElementById('proy-abono').value       = p.abono        || '';
+  document.getElementById('proy-costo').value       = p.costo        || '';
   document.getElementById('modal-proy-titulo').textContent = 'Editar Proyecto';
+  calcProyModal();
   document.getElementById('modal-proyecto').classList.add('open');
 }
 
@@ -2359,11 +2596,11 @@ function renderProyectos() {
   }
   empty.style.display = 'none';
 
-  const estadoColor = { activo:'var(--green)', pausado:'var(--amber)', completado:'var(--blue)', cancelado:'var(--red)' };
-  const estadoIcon  = { activo:'🟢', pausado:'🟡', completado:'✅', cancelado:'🔴' };
+  const estadoColor = { activo:'var(--green)', pausado:'var(--amber)', completado:'var(--blue)', finiquitado:'var(--acc)', cancelado:'var(--red)' };
+  const estadoIcon  = { activo:'🟢', pausado:'🟡', completado:'✅', finiquitado:'💰', cancelado:'🔴' };
 
   lista.innerHTML = proyectos.map(p => {
-    // Calcular ingresos/egresos/costos del proyecto
+    // Calcular ingresos/egresos/costos del proyecto desde registros vinculados
     const regs     = registros.filter(r => (r.proyectoId||'').toLowerCase() === p.id.toLowerCase() ||
                                            (r.proyectoId||'').toLowerCase() === p.nombre.toLowerCase());
     const ingresos = regs.filter(r => r.tipo==='IN').reduce((a,b)  => a+(b.neto||0), 0);
@@ -2371,6 +2608,15 @@ function renderProyectos() {
     const costos   = regs.reduce((a,b) => a+(b.costo||0), 0);
     const ganancia = ingresos - costos - egresos;
     const diezmos  = regs.reduce((a,b) => a+(b.diezmo||0), 0);
+
+    // Datos financieros guardados en el proyecto
+    const pMonto   = p.monto    || 0;
+    const pAbono   = p.abono    || 0;
+    const pCosto   = p.costo    || 0;
+    const pGan     = p.ganancia || (pMonto - pCosto);
+    const pSaldo   = Math.max(0, pMonto - pAbono);
+
+    const tieneFinanzas = pMonto > 0 || pAbono > 0;
 
     return `
     <div style="background:var(--s2);border:1px solid var(--bd2);border-left:4px solid ${estadoColor[p.estado]||'var(--acc)'};
@@ -2396,14 +2642,37 @@ function renderProyectos() {
             color:var(--red);border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
         </div>
       </div>
-      <!-- Resumen financiero -->
+      <!-- Finanzas del proyecto (si las tiene) -->
+      ${tieneFinanzas ? `
+      <div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px 11px;margin-bottom:10px">
+        <div style="font-size:.58rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:7px">💵 Finanzas del Proyecto</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px">
+          <div style="background:var(--lps-bg);border:1px solid var(--lps-bd);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-size:.54rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Monto Total</div>
+            <div style="font-family:var(--mono);color:var(--lps-fg);font-size:.83rem;font-weight:600">L ${fmt(pMonto)}</div>
+          </div>
+          <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:6px;padding:7px;text-align:center">
+            <div style="font-size:.54rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Abono</div>
+            <div style="font-family:var(--mono);color:var(--amber);font-size:.83rem;font-weight:600">L ${fmt(pAbono)}</div>
+          </div>
+          <div style="background:var(--blue-bg);border:1px solid var(--bd2);border-radius:6px;padding:7px;text-align:center">
+            <div style="font-size:.54rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Saldo por Cobrar</div>
+            <div style="font-family:var(--mono);color:${pSaldo>0?'var(--blue)':'var(--green)'};font-size:.83rem;font-weight:700">${pSaldo > 0 ? 'L '+fmt(pSaldo) : '✅ Pagado'}</div>
+          </div>
+          <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:6px;padding:7px;text-align:center">
+            <div style="font-size:.54rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">Ganancia Est.</div>
+            <div style="font-family:var(--mono);color:var(--green);font-size:.83rem;font-weight:600">L ${fmt(pGan)}</div>
+          </div>
+        </div>
+      </div>` : ''}
+      <!-- Resumen financiero desde registros vinculados -->
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;margin-bottom:10px">
         <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:7px;padding:8px;text-align:center">
-          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">▲ Ingresos</div>
+          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">▲ Ingresos (Reg.)</div>
           <div style="font-family:var(--mono);color:var(--green);font-size:.85rem;font-weight:600">L ${fmt(ingresos)}</div>
         </div>
         <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:7px;padding:8px;text-align:center">
-          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">▼ Egresos</div>
+          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">▼ Egresos (Reg.)</div>
           <div style="font-family:var(--mono);color:var(--red);font-size:.85rem;font-weight:600">L ${fmt(egresos)}</div>
         </div>
         <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:7px;padding:8px;text-align:center">
@@ -2411,7 +2680,7 @@ function renderProyectos() {
           <div style="font-family:var(--mono);color:var(--orange);font-size:.85rem">L ${fmt(costos)}</div>
         </div>
         <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:8px;text-align:center">
-          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">📈 Ganancia</div>
+          <div style="font-size:.55rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:2px">📈 Ganancia Real</div>
           <div style="font-family:var(--mono);font-size:.85rem;font-weight:700;color:${ganancia>=0?'var(--amber)':'var(--red)'}">L ${fmt(ganancia)}</div>
         </div>
         <div style="background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:7px;padding:8px;text-align:center">
@@ -2458,6 +2727,8 @@ function editarRegistro(id) {
   document.getElementById('edit-metodo').value    = r.metodoPago  || '';
   document.getElementById('edit-proyecto').value  = r.proyectoId  || '';
   document.getElementById('edit-pagado').value    = r.pagado      || 'Sí';
+  document.getElementById('edit-diezmo').value    = r.diezmo      || '';
+  document.getElementById('edit-ofrenda').value   = r.ofrenda     || '';
   document.getElementById('edit-obs').value       = r.observaciones || '';
   document.getElementById('modal-editar').classList.add('open');
 }
@@ -2476,29 +2747,44 @@ function guardarEdicion() {
   const costo   = parseFloat(document.getElementById('edit-costo').value)    || 0;
   const ganancia = Math.max(0, bruto - costo);
 
+  const nuevoDiezmo   = parseFloat(document.getElementById('edit-diezmo').value)  || 0;
+  const nuevaOfrenda  = parseFloat(document.getElementById('edit-ofrenda').value) || 0;
+  const viejoDiezmo   = r.diezmo  || 0;
+  const viejaOfrenda  = r.ofrenda || 0;
+
+  /* Ajustar totales acumulados */
+  const diffDiezmo  = nuevoDiezmo  - viejoDiezmo;
+  const diffOfrenda = nuevaOfrenda - viejaOfrenda;
+  if (diffDiezmo  !== 0) diezmoTotal  = Math.max(0, diezmoTotal  + diffDiezmo);
+  if (diffOfrenda !== 0) ofrendaTotal = Math.max(0, ofrendaTotal + diffOfrenda);
+
   registros[idx] = {
     ...r,
-    desc:         document.getElementById('edit-desc').value.trim()     || r.desc,
-    fechaKey:     document.getElementById('edit-fecha').value           || r.fechaKey,
-    fecha:        document.getElementById('edit-fecha').value
-                    ? new Date(document.getElementById('edit-fecha').value + 'T12:00:00')
-                        .toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'})
-                    : r.fecha,
+    desc:          document.getElementById('edit-desc').value.trim()     || r.desc,
+    fechaKey:      document.getElementById('edit-fecha').value           || r.fechaKey,
+    fecha:         document.getElementById('edit-fecha').value
+                     ? new Date(document.getElementById('edit-fecha').value + 'T12:00:00')
+                         .toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'})
+                     : r.fecha,
     bruto,
-    neto:         bruto,
+    neto:          bruto,
     costo,
     ganancia,
-    cliente:      document.getElementById('edit-cliente').value.trim()  || '',
-    categoria:    document.getElementById('edit-categoria').value       || r.categoria,
-    metodoPago:   document.getElementById('edit-metodo').value          || '',
-    proyectoId:   document.getElementById('edit-proyecto').value.trim() || '',
-    pagado:       document.getElementById('edit-pagado').value          || 'Sí',
-    observaciones:document.getElementById('edit-obs').value.trim()      || ''
+    cliente:       document.getElementById('edit-cliente').value.trim()  || '',
+    categoria:     document.getElementById('edit-categoria').value       || r.categoria,
+    metodoPago:    document.getElementById('edit-metodo').value          || '',
+    proyectoId:    document.getElementById('edit-proyecto').value.trim() || '',
+    pagado:        document.getElementById('edit-pagado').value          || 'Sí',
+    diezmo:        nuevoDiezmo,
+    ofrenda:       nuevaOfrenda,
+    observaciones: document.getElementById('edit-obs').value.trim()      || ''
   };
 
   saveAll();
   renderHistorial();
   calcular();
+  renderDiezmoHist();
+  renderOfrendaHist();
   cerrarEditar();
   toast('✓ Registro actualizado');
 }
@@ -2643,7 +2929,9 @@ function guardar() {
   const chkOfrenda = document.getElementById('chk-ofrenda');
   const ofrendaPct = parseFloat(document.getElementById('ofrenda-pct').value) || 0;
   if (currentType === 'IN' && chkOfrenda && chkOfrenda.checked && ofrendaPct > 0) {
-    ofrendaApartada = neto * ofrendaPct / 100;
+    /* Si hay costo, calcular sobre ganancia (monto − costo); si no, sobre el neto completo */
+    const baseOfrenda = (costo > 0 && ganancia > 0) ? ganancia : neto;
+    ofrendaApartada = baseOfrenda * ofrendaPct / 100;
     if (ofrendaApartada > 0) {
       ofrendaTotal += ofrendaApartada;
       ofrendaHistorial.unshift({ fecha: fechaDisplay, desc: desc, monto: ofrendaApartada, pct: ofrendaPct });
@@ -2754,6 +3042,215 @@ function renderOfrendaHist() {
   /* actualizar display */
   const disp = document.getElementById('ofrenda-val');
   if (disp) disp.value = fmt(ofrendaTotal);
+}
+
+/* ═══ CIERRE DIARIO ═══ */
+let cierreDiarioActual = null;
+
+function cierreDiario(fechaKey) {
+  const fk = fechaKey || hoyKey();
+  const fechaLabel = new Date(fk + 'T12:00:00').toLocaleDateString('es-HN',
+    {timeZone:'America/Tegucigalpa', weekday:'long', year:'numeric', month:'long', day:'numeric'});
+
+  const regs = registros.filter(r => {
+    if (r.esCierre) return false;
+    let k = normalizarFechaKey(r.fechaKey || r.fecha || '');
+    return k === fk;
+  });
+
+  const ingresos = regs.filter(r => r.tipo==='IN').reduce((a,b)  => a+(b.neto||0), 0);
+  const egresos  = regs.filter(r => r.tipo==='OUT').reduce((a,b) => a+(b.neto||0), 0);
+  const costos   = regs.reduce((a,b) => a+(b.costo||0), 0);
+  const diezmos  = regs.reduce((a,b) => a+(b.diezmo||0), 0);
+  const ofrendas = regs.reduce((a,b) => a+(b.ofrenda||0), 0);
+  const ganancia = ingresos - costos - egresos;
+  const neto     = ingresos - egresos;
+
+  /* Resumen por categoría */
+  const cats = {};
+  regs.forEach(r => {
+    const c = r.categoria || 'Sin categoría';
+    if (!cats[c]) cats[c] = { in:0, out:0 };
+    if (r.tipo === 'IN') cats[c].in += r.neto||0;
+    else                 cats[c].out += r.neto||0;
+  });
+  const catHTML = Object.entries(cats).length > 0
+    ? '<div style="font-size:.6rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Por Categoría</div>' +
+      Object.entries(cats).map(([c,v]) => `
+        <div style="display:flex;justify-content:space-between;font-size:.7rem;padding:2px 0;border-bottom:1px dashed var(--bd2)">
+          <span style="color:var(--text2)">${c}</span>
+          <span style="font-family:var(--mono)">
+            ${v.in > 0 ? `<span style="color:var(--green)">+L ${fmt(v.in)}</span>` : ''}
+            ${v.out > 0 ? `<span style="color:var(--red);margin-left:6px">−L ${fmt(v.out)}</span>` : ''}
+          </span>
+        </div>`).join('')
+    : '';
+
+  cierreDiarioActual = { fk, fechaLabel, ingresos, egresos, costos, ganancia, neto, diezmos, ofrendas, totalMovs: regs.length };
+
+  document.getElementById('cd-fecha-label').textContent = fechaLabel;
+  document.getElementById('cd-ingresos').textContent = 'L ' + fmt(ingresos);
+  document.getElementById('cd-egresos').textContent  = 'L ' + fmt(egresos);
+  document.getElementById('cd-costos').textContent   = 'L ' + fmt(costos);
+  document.getElementById('cd-diezmos').textContent  = 'L ' + fmt(diezmos);
+  document.getElementById('cd-ofrendas').textContent = 'L ' + fmt(ofrendas);
+  document.getElementById('cd-categorias').innerHTML = catHTML;
+
+  const ganEl = document.getElementById('cd-ganancia');
+  ganEl.textContent = 'L ' + fmt(ganancia);
+  ganEl.style.color = ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
+
+  const netoEl = document.getElementById('cd-neto');
+  netoEl.textContent = 'L ' + fmt(neto);
+  netoEl.style.color = neto >= 0 ? 'var(--green)' : 'var(--red)';
+
+  document.getElementById('cd-movs').textContent = regs.length;
+  if (regs.length === 0) toast('Sin registros para hoy todavía', 'warn');
+  document.getElementById('modal-cierre-diario').classList.add('open');
+}
+
+function closeCierreDiarioModal() {
+  document.getElementById('modal-cierre-diario').classList.remove('open');
+}
+
+function guardarCierreDiario() {
+  if (!cierreDiarioActual) return;
+  const c = cierreDiarioActual;
+  const reg = {
+    id: Date.now(),
+    fecha: c.fechaLabel, fechaKey: c.fk,
+    hora: horaHN(new Date()),
+    desc: `[CIERRE DÍA] ${c.fechaLabel} · Ingresos L${fmt(c.ingresos)} | Egresos L${fmt(c.egresos)} | Ganancia L${fmt(c.ganancia)}`,
+    neto: 0, bruto: 0, comision: 0, diezmo: c.diezmos, ofrenda: c.ofrendas,
+    costo: c.costos, ganancia: c.ganancia,
+    categoria: 'Cierre Diario', cliente: '', pagado: 'Sí',
+    observaciones: `Movimientos: ${c.totalMovs}`,
+    tipo: 'IN', bancoId:'', bancoNombre:'', esCierre: true
+  };
+  registros.unshift(reg);
+  enviarAGoogleSheets(reg);
+  saveAll();
+  closeCierreDiarioModal();
+  toast(`Cierre diario guardado ✓`, 'ok');
+}
+
+/* ═══ CIERRE SEMANAL ═══ */
+let cierreSemanalActual = null;
+
+function cierreSemanal() {
+  /* Calcular lunes y domingo de la semana actual */
+  const hoy   = new Date();
+  const dow   = hoy.getDay(); // 0 dom, 1 lun...
+  const diff  = dow === 0 ? -6 : 1 - dow;
+  const lunes = new Date(hoy); lunes.setDate(hoy.getDate() + diff);
+  const dom   = new Date(lunes); dom.setDate(lunes.getDate() + 6);
+
+  const toKey = d => d.toLocaleDateString('en-CA', {timeZone:'America/Tegucigalpa'});
+  document.getElementById('cs-desde').value = toKey(lunes);
+  document.getElementById('cs-hasta').value = toKey(dom);
+
+  recalcCierreSemanal();
+  document.getElementById('modal-cierre-semanal').classList.add('open');
+}
+
+function recalcCierreSemanal() {
+  const desde = document.getElementById('cs-desde').value;
+  const hasta = document.getElementById('cs-hasta').value;
+  if (!desde || !hasta) return;
+
+  const d1 = new Date(desde + 'T00:00:00');
+  const d2 = new Date(hasta + 'T23:59:59');
+  const label = `${d1.toLocaleDateString('es-HN',{day:'2-digit',month:'short'})} – ${d2.toLocaleDateString('es-HN',{day:'2-digit',month:'short',year:'numeric'})}`;
+  document.getElementById('cs-fecha-label').textContent = label;
+
+  const regs = registros.filter(r => {
+    if (r.esCierre) return false;
+    const k = normalizarFechaKey(r.fechaKey || r.fecha || '');
+    if (!k) return false;
+    const d = new Date(k + 'T12:00:00');
+    return !isNaN(d) && d >= d1 && d <= d2;
+  });
+
+  const ingresos = regs.filter(r => r.tipo==='IN').reduce((a,b)  => a+(b.neto||0), 0);
+  const egresos  = regs.filter(r => r.tipo==='OUT').reduce((a,b) => a+(b.neto||0), 0);
+  const costos   = regs.reduce((a,b) => a+(b.costo||0), 0);
+  const diezmos  = regs.reduce((a,b) => a+(b.diezmo||0), 0);
+  const ofrendas = regs.reduce((a,b) => a+(b.ofrenda||0), 0);
+  const ganancia = ingresos - costos - egresos;
+  const neto     = ingresos - egresos;
+  const margen   = ingresos > 0 ? ((ganancia/ingresos)*100).toFixed(1) : 0;
+
+  cierreSemanalActual = { desde, hasta, label, ingresos, egresos, costos, ganancia, neto, diezmos, ofrendas, margen, totalMovs: regs.length };
+
+  document.getElementById('cs-ingresos').textContent = 'L ' + fmt(ingresos);
+  document.getElementById('cs-egresos').textContent  = 'L ' + fmt(egresos);
+  document.getElementById('cs-costos').textContent   = 'L ' + fmt(costos);
+  document.getElementById('cs-diezmos').textContent  = 'L ' + fmt(diezmos);
+  document.getElementById('cs-ofrendas').textContent = 'L ' + fmt(ofrendas);
+  document.getElementById('cs-margen').textContent   = margen + '%';
+  document.getElementById('cs-movs').textContent     = regs.length;
+
+  const ganEl = document.getElementById('cs-ganancia');
+  ganEl.textContent = 'L ' + fmt(ganancia);
+  ganEl.style.color = ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
+
+  const netoEl = document.getElementById('cs-neto');
+  netoEl.textContent = 'L ' + fmt(neto);
+  netoEl.style.color = neto >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('cs-margen').style.color = ganancia >= 0 ? 'var(--amber)' : 'var(--red)';
+
+  /* Resumen por día */
+  const diasMap = {};
+  regs.forEach(r => {
+    const k = normalizarFechaKey(r.fechaKey || r.fecha || '');
+    if (!k) return;
+    if (!diasMap[k]) diasMap[k] = { in:0, out:0, costos:0 };
+    if (r.tipo==='IN') { diasMap[k].in += r.neto||0; diasMap[k].costos += r.costo||0; }
+    else                diasMap[k].out += r.neto||0;
+  });
+  const diasKeys = Object.keys(diasMap).sort();
+  const diasHTML = diasKeys.length > 0
+    ? '<div style="font-size:.6rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px">Resumen por Día</div>' +
+      diasKeys.map(k => {
+        const v = diasMap[k];
+        const gan = v.in - v.costos - v.out;
+        const label = new Date(k+'T12:00:00').toLocaleDateString('es-HN',{weekday:'short',day:'2-digit',month:'short'});
+        return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:.7rem;padding:4px 0;border-bottom:1px dashed var(--bd2)">
+          <span style="color:var(--text2);min-width:80px">${label}</span>
+          <span style="font-family:var(--mono)">
+            <span style="color:var(--green)">+L ${fmt(v.in)}</span>
+            ${v.out>0 ? `<span style="color:var(--red);margin-left:5px">−L ${fmt(v.out)}</span>` : ''}
+            <span style="color:var(--amber);margin-left:5px;font-weight:700">= L ${fmt(gan)}</span>
+          </span>
+        </div>`;
+      }).join('')
+    : '<div style="color:var(--dim);font-size:.72rem">Sin movimientos en este rango</div>';
+  document.getElementById('cs-dias').innerHTML = diasHTML;
+}
+
+function closeCierreSemanalModal() {
+  document.getElementById('modal-cierre-semanal').classList.remove('open');
+}
+
+function guardarCierreSemanal() {
+  if (!cierreSemanalActual) return;
+  const c = cierreSemanalActual;
+  const reg = {
+    id: Date.now(),
+    fecha: fechaHN(new Date()), fechaKey: hoyKey(),
+    hora: horaHN(new Date()),
+    desc: `[CIERRE SEMANA] ${c.label} · Ingresos L${fmt(c.ingresos)} | Egresos L${fmt(c.egresos)} | Ganancia L${fmt(c.ganancia)}`,
+    neto: 0, bruto: 0, comision: 0, diezmo: c.diezmos, ofrenda: c.ofrendas,
+    costo: c.costos, ganancia: c.ganancia,
+    categoria: 'Cierre Semanal', cliente: '', pagado: 'Sí',
+    observaciones: `Semana: ${c.label} | Margen: ${c.margen}% | Movimientos: ${c.totalMovs}`,
+    tipo: 'IN', bancoId:'', bancoNombre:'', esCierre: true
+  };
+  registros.unshift(reg);
+  enviarAGoogleSheets(reg);
+  saveAll();
+  closeCierreSemanalModal();
+  toast(`Cierre semanal guardado ✓`);
 }
 
 /* ═══ CIERRE MENSUAL ═══ */
