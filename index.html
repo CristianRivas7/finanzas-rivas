@@ -829,6 +829,8 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <button class="tab-btn" onclick="tab('v-cal',this)">Calendario</button>
     <button class="tab-btn" onclick="tab('v-inv',this)">📦 Inventario</button>
     <button class="tab-btn" onclick="tab('v-proyectos',this)">📋 Proyectos</button>
+    <button class="tab-btn" onclick="tab('v-gastos-per',this)">🏠 Personal</button>
+    <button class="tab-btn" onclick="tab('v-agenda',this)">📝 Agenda</button>
   </div>
 </nav>
 
@@ -1075,6 +1077,20 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         <!-- OBSERVACIONES -->
         <textarea id="reg-obs" class="pi" placeholder="Observaciones (opcional)..." rows="2"
           style="resize:vertical;font-size:.77rem;margin-bottom:6px"></textarea>
+        <!-- IMAGEN COMPROBANTE -->
+        <div style="background:var(--s3);border:1px dashed var(--bd2);border-radius:7px;padding:8px;margin-bottom:7px">
+          <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px">📷 Comprobante (opcional)</div>
+          <input type="file" id="reg-img-input" accept="image/*" style="display:none" onchange="cargarImagenReg(this)">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+            <button type="button" onclick="document.getElementById('reg-img-input').click()" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:6px;padding:4px 10px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">📷 Adjuntar imagen</button>
+            <button type="button" onclick="limpiarImagenReg()" id="reg-img-clear" style="display:none;background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:6px;padding:4px 8px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">✕ Quitar</button>
+            <span id="reg-img-nombre" style="font-size:.62rem;color:var(--muted)"></span>
+          </div>
+          <div id="reg-img-preview" style="margin-top:6px;display:none">
+            <img id="reg-img-thumb" style="max-width:100%;max-height:100px;border-radius:5px;border:1px solid var(--bd2);object-fit:contain;cursor:pointer" onclick="verImagen(this.src)">
+          </div>
+          <input type="hidden" id="reg-img-data">
+        </div>
         <button class="btn-save" id="btn-save" onclick="guardar()">GUARDAR MOVIMIENTO</button>
         <div class="mlog" id="mlog"></div>
       </div>
@@ -1548,6 +1564,67 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- VISTA GASTOS PERSONALES Y BENEFICENCIA -->
+<div id="v-gastos-per" class="view">
+  <div style="padding:12px;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:800;color:var(--text)">🏠 Gastos Personales &amp; Beneficencia</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-save" onclick="abrirModalGastosPer('personal')" style="padding:7px 14px;font-size:.73rem;background:var(--blue)">+ Gasto Personal</button>
+        <button class="btn-save" onclick="abrirModalGastosPer('beneficencia')" style="padding:7px 14px;font-size:.73rem;background:#9333ea">+ Beneficencia</button>
+      </div>
+    </div>
+    <!-- Totales -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px" id="gp-totales"></div>
+    <!-- Filtro tipo -->
+    <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.67rem;color:var(--muted);font-weight:700">Filtrar:</span>
+      <button onclick="filtroGP='todos';renderGastosPersonales()" id="fgp-todos" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc);font-family:var(--font)">Todos</button>
+      <button onclick="filtroGP='personal';renderGastosPersonales()" id="fgp-personal" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--blue-bg);color:var(--blue);border:1px solid var(--bd2);font-family:var(--font)">🏠 Personal</button>
+      <button onclick="filtroGP='beneficencia';renderGastosPersonales()" id="fgp-bene" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--pur-bg);color:#c084fc;border:1px solid var(--bd2);font-family:var(--font)">🤲 Beneficencia</button>
+      <input type="month" id="fgp-mes" class="pi" style="margin:0;max-width:150px;font-size:.7rem" onchange="renderGastosPersonales()">
+    </div>
+    <!-- Lista -->
+    <div id="gp-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="gp-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:.82rem;display:none">
+      Sin registros. Agrega el primero con los botones de arriba.
+    </div>
+  </div>
+</div>
+
+<!-- VISTA AGENDA/NOTAS -->
+<div id="v-agenda" class="view">
+  <div style="padding:12px;max-width:900px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:800;color:var(--text)">📝 Agenda &amp; Notas</div>
+      <button class="btn-save" onclick="abrirModalNota()" style="padding:7px 14px;font-size:.73rem">+ Nueva Nota</button>
+    </div>
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:12px" id="ag-stats"></div>
+    <!-- Filtros -->
+    <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.67rem;color:var(--muted);font-weight:700">Tipo:</span>
+      <select id="fag-tipo" class="pi" style="margin:0;max-width:170px;font-size:.7rem" onchange="renderAgenda()">
+        <option value="">Todos</option>
+        <option value="nota">📋 Nota</option>
+        <option value="tarea">✅ Tarea</option>
+        <option value="recordatorio">⏰ Recordatorio</option>
+        <option value="idea">💡 Idea</option>
+      </select>
+      <select id="fag-estado" class="pi" style="margin:0;max-width:170px;font-size:.7rem" onchange="renderAgenda()">
+        <option value="">Todos los estados</option>
+        <option value="pendiente">⏳ Pendiente</option>
+        <option value="completado">✅ Completado</option>
+        <option value="cancelado">🔴 Cancelado</option>
+      </select>
+    </div>
+    <div id="agenda-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="agenda-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:.82rem;display:none">
+      Sin notas todavía. Agrega la primera con el botón de arriba.
+    </div>
+  </div>
+</div>
+
 <!-- MODAL NUEVO/EDITAR PROYECTO -->
 <div class="overlay" id="modal-proyecto" onclick="if(event.target===this)cerrarProyecto()">
   <div class="modal" style="max-width:440px;width:95%">
@@ -1843,6 +1920,108 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- MODAL GASTO PERSONAL / BENEFICENCIA -->
+<div class="overlay" id="modal-gasto-per" onclick="if(event.target===this)cerrarModalGastosPer()">
+  <div class="modal" style="max-width:460px;width:95%">
+    <h3 style="margin-bottom:12px"><span id="mgp-titulo">🏠 Gasto Personal</span></h3>
+    <input type="hidden" id="mgp-edit-id">
+    <input type="hidden" id="mgp-tipo-val">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="mgp-desc" class="pi" placeholder="Descripción del gasto..." style="margin:0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <input type="number" id="mgp-monto" class="pi" placeholder="Monto (Lps)" min="0" step="0.01" style="margin:0;background:var(--lps-bg);color:var(--lps-fg);border-color:var(--lps-bd)">
+        <input type="date" id="mgp-fecha" class="pi" style="margin:0">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <select id="mgp-categoria" class="pi" style="margin:0;font-size:.77rem">
+          <option value="">— Categoría —</option>
+          <optgroup label="🏠 Personal">
+            <option value="Alimentación">Alimentación</option>
+            <option value="Transporte">Transporte</option>
+            <option value="Salud">Salud</option>
+            <option value="Ropa">Ropa</option>
+            <option value="Entretenimiento">Entretenimiento</option>
+            <option value="Educación">Educación</option>
+            <option value="Servicios (agua/luz/internet)">Servicios</option>
+            <option value="Vivienda/Alquiler">Vivienda/Alquiler</option>
+            <option value="Familia">Familia</option>
+          </optgroup>
+          <optgroup label="🤲 Beneficencia">
+            <option value="Donación iglesia">Donación iglesia</option>
+            <option value="Ayuda familiar">Ayuda familiar</option>
+            <option value="Ayuda comunitaria">Ayuda comunitaria</option>
+            <option value="Ofrenda especial">Ofrenda especial</option>
+          </optgroup>
+          <option value="Otros">Otros</option>
+        </select>
+        <select id="mgp-metodo" class="pi" style="margin:0;font-size:.77rem">
+          <option value="Efectivo">💵 Efectivo</option>
+          <option value="Transferencia">🏦 Transferencia</option>
+          <option value="Tarjeta">💳 Tarjeta</option>
+        </select>
+      </div>
+      <!-- Imagen adjunta -->
+      <div style="background:var(--s3);border:1px dashed var(--bd2);border-radius:7px;padding:9px">
+        <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:6px">📷 Comprobante (opcional)</div>
+        <input type="file" id="mgp-img-input" accept="image/*" style="display:none" onchange="cargarImagenGP(this)">
+        <div style="display:flex;gap:7px;align-items:center">
+          <button onclick="document.getElementById('mgp-img-input').click()" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:6px;padding:5px 11px;font-size:.68rem;cursor:pointer;font-family:var(--font);font-weight:700">📷 Seleccionar imagen</button>
+          <button onclick="limpiarImagenGP()" id="mgp-img-clear" style="display:none;background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:6px;padding:5px 9px;font-size:.68rem;cursor:pointer;font-family:var(--font);font-weight:700">✕ Quitar</button>
+        </div>
+        <div id="mgp-img-preview" style="margin-top:7px;display:none">
+          <img id="mgp-img-thumb" style="max-width:100%;max-height:140px;border-radius:6px;border:1px solid var(--bd2);object-fit:contain">
+          <div id="mgp-img-size" style="font-size:.58rem;color:var(--muted);margin-top:3px"></div>
+        </div>
+        <input type="hidden" id="mgp-img-data">
+      </div>
+      <textarea id="mgp-obs" class="pi" placeholder="Observaciones..." rows="2" style="margin:0;resize:vertical;font-size:.77rem"></textarea>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalGastosPer()">Cancelar</button>
+      <button class="mbtn-ok" id="mgp-ok-btn" onclick="guardarGastoPersonal()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTA/AGENDA -->
+<div class="overlay" id="modal-nota" onclick="if(event.target===this)cerrarModalNota()">
+  <div class="modal" style="max-width:460px;width:95%">
+    <h3 style="color:var(--acc);margin-bottom:12px">📝 <span id="mnota-titulo">Nueva Nota</span></h3>
+    <input type="hidden" id="mnota-edit-id">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="mnota-titulo-val" class="pi" placeholder="Título de la nota..." style="margin:0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <select id="mnota-tipo" class="pi" style="margin:0;font-size:.77rem">
+          <option value="nota">📋 Nota</option>
+          <option value="tarea">✅ Tarea</option>
+          <option value="recordatorio">⏰ Recordatorio</option>
+          <option value="idea">💡 Idea</option>
+        </select>
+        <select id="mnota-prioridad" class="pi" style="margin:0;font-size:.77rem">
+          <option value="normal">⚪ Normal</option>
+          <option value="alta">🔴 Alta</option>
+          <option value="media">🟡 Media</option>
+          <option value="baja">🟢 Baja</option>
+        </select>
+      </div>
+      <input type="date" id="mnota-fecha-vence" class="pi" placeholder="Fecha límite (opcional)" style="margin:0">
+      <textarea id="mnota-contenido" class="pi" placeholder="Contenido de la nota..." rows="4" style="margin:0;resize:vertical;font-size:.77rem"></textarea>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalNota()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarNota()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER IMAGEN -->
+<div class="overlay" id="modal-ver-imagen" onclick="cerrarVerImagen()">
+  <div style="max-width:90vw;max-height:90vh;display:flex;flex-direction:column;align-items:center;gap:10px">
+    <img id="modal-imagen-src" style="max-width:90vw;max-height:80vh;border-radius:10px;border:1px solid var(--bd2);object-fit:contain">
+    <button onclick="cerrarVerImagen()" style="background:var(--s2);border:1px solid var(--bd2);color:var(--text2);padding:7px 20px;border-radius:7px;font-family:var(--font);font-weight:700;cursor:pointer;font-size:.75rem">✕ Cerrar</button>
+  </div>
+</div>
+
 <!-- MODAL TASAS -->
 
 <div class="overlay" id="modal-tasas" onclick="if(event.target===this)closeModal()">
@@ -1877,6 +2056,9 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbx-ey6wcNfCFVdnhvkSbwIi
 /* ═══ ESTADO ═══ */
 let registros = [];
 let proyectos = [];
+let gastosPersonales = [];
+let agendaNotas = [];
+let filtroGP = 'todos';
 let diezmoTotal = 0;
 let diezmoHistorial = [];
 let ofrendaTotal = 0;
@@ -2045,6 +2227,8 @@ function tab(id, btn) {
   if (id === 'v-reg')        renderReg();
   if (id === 'v-inv')        invRender();
   if (id === 'v-proyectos')  renderProyectos();
+  if (id === 'v-agenda')     renderAgenda();
+  if (id === 'v-gastos-per') renderGastosPersonales();
 }
 
 /* ═══ TASAS ═══ */
@@ -2943,6 +3127,7 @@ function guardar() {
   }
 
   const now = new Date();
+  const imgData = document.getElementById('reg-img-data').value || '';
   const reg = {
     id: generarID(now),
     fecha: fechaDisplay, fechaKey: fk,
@@ -2957,7 +3142,8 @@ function guardar() {
     tipoContacto: tipoContacto,
     metodoPago: metodoPago,
     bancoId: bid, bancoNombre: sel.options[sel.selectedIndex].text,
-    tipo: currentType
+    tipo: currentType,
+    imagen: imgData
   };
   registros.unshift(reg);
 
@@ -2977,6 +3163,7 @@ function guardar() {
   document.getElementById('reg-proyecto-id').value  = '';
   document.getElementById('reg-tipo-mov').value     = 'normal';
   document.getElementById('com-prev').classList.remove('show');
+  limpiarImagenReg();
   toggleClienteProv('cliente'); // reset a cliente por defecto
 
   actualizarLog(); calcular(); saveAll(); buildBancoFilter();
@@ -3729,6 +3916,8 @@ function saveAll() {
   localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial, pagado: diezmoPagado}));
   localStorage.setItem('cr_ofrenda', JSON.stringify({total: ofrendaTotal, historial: ofrendaHistorial, pagada: ofrendaPagada}));
   localStorage.setItem('cr_cierres', JSON.stringify(historialCierres));
+  localStorage.setItem('cr_gastos_per', JSON.stringify(gastosPersonales));
+  localStorage.setItem('cr_agenda', JSON.stringify(agendaNotas));
   invSave();
 }
 
@@ -3759,6 +3948,12 @@ function loadAll() {
   }
   const cz = JSON.parse(localStorage.getItem('cr_cierres') || 'null');
   if (cz) historialCierres = cz;
+
+  const gz = JSON.parse(localStorage.getItem('cr_gastos_per') || 'null');
+  if (gz) gastosPersonales = gz;
+
+  const az = JSON.parse(localStorage.getItem('cr_agenda') || 'null');
+  if (az) agendaNotas = az;
 
   calcular();
   actualizarLog();
@@ -4353,6 +4548,428 @@ function toast(msg, tipo) {
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), 3000);
 }
-</script>
+/* ═══════════════════════════════════════════════════════
+   MÓDULO DE IMÁGENES — compresión automática a 800px/70%
+   ═══════════════════════════════════════════════════════ */
+function comprimirImagen(file, maxW, quality, cb) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      cb(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function cargarImagenReg(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  comprimirImagen(file, 800, 0.70, b64 => {
+    document.getElementById('reg-img-data').value = b64;
+    document.getElementById('reg-img-thumb').src = b64;
+    document.getElementById('reg-img-preview').style.display = 'block';
+    document.getElementById('reg-img-clear').style.display = 'inline-block';
+    document.getElementById('reg-img-nombre').textContent = file.name;
+    const kb = Math.round(b64.length * 0.75 / 1024);
+    document.getElementById('reg-img-nombre').textContent = `${file.name} (${kb} KB comprimido)`;
+  });
+}
+
+function limpiarImagenReg() {
+  document.getElementById('reg-img-data').value = '';
+  document.getElementById('reg-img-input').value = '';
+  document.getElementById('reg-img-preview').style.display = 'none';
+  document.getElementById('reg-img-clear').style.display = 'none';
+  document.getElementById('reg-img-nombre').textContent = '';
+}
+
+function cargarImagenGP(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  comprimirImagen(file, 800, 0.70, b64 => {
+    document.getElementById('mgp-img-data').value = b64;
+    document.getElementById('mgp-img-thumb').src = b64;
+    document.getElementById('mgp-img-preview').style.display = 'block';
+    document.getElementById('mgp-img-clear').style.display = 'inline-block';
+    const kb = Math.round(b64.length * 0.75 / 1024);
+    document.getElementById('mgp-img-size').textContent = `${file.name} (${kb} KB comprimido)`;
+  });
+}
+
+function limpiarImagenGP() {
+  document.getElementById('mgp-img-data').value = '';
+  document.getElementById('mgp-img-input').value = '';
+  document.getElementById('mgp-img-preview').style.display = 'none';
+  document.getElementById('mgp-img-clear').style.display = 'none';
+  document.getElementById('mgp-img-size').textContent = '';
+}
+
+/* Imagen en inventario: se llama desde el form de inventario */
+function cargarImagenInv(input, previewId, dataId, clearId) {
+  if (!input.files || !input.files[0]) return;
+  comprimirImagen(input.files[0], 800, 0.70, b64 => {
+    document.getElementById(dataId).value = b64;
+    const prev = document.getElementById(previewId);
+    if (prev) { prev.src = b64; prev.style.display = 'block'; }
+    const clr = document.getElementById(clearId);
+    if (clr) clr.style.display = 'inline-block';
+  });
+}
+
+function verImagen(src) {
+  document.getElementById('modal-imagen-src').src = src;
+  document.getElementById('modal-ver-imagen').classList.add('open');
+}
+
+function cerrarVerImagen() {
+  document.getElementById('modal-ver-imagen').classList.remove('open');
+}
+
+/* ═══════════════════════════════════════════════════════
+   MÓDULO GASTOS PERSONALES & BENEFICENCIA
+   Hoja separada en Google Sheets via campo 'sheet'
+   ═══════════════════════════════════════════════════════ */
+let gastoPerEditId = null;
+
+function abrirModalGastosPer(tipo) {
+  gastoPerEditId = null;
+  document.getElementById('mgp-edit-id').value     = '';
+  document.getElementById('mgp-tipo-val').value    = tipo;
+  document.getElementById('mgp-desc').value        = '';
+  document.getElementById('mgp-monto').value       = '';
+  document.getElementById('mgp-fecha').value       = hoyKey();
+  document.getElementById('mgp-categoria').value   = '';
+  document.getElementById('mgp-metodo').value      = 'Efectivo';
+  document.getElementById('mgp-obs').value         = '';
+  limpiarImagenGP();
+  const esBene = tipo === 'beneficencia';
+  document.getElementById('mgp-titulo').textContent = esBene ? '🤲 Beneficencia' : '🏠 Gasto Personal';
+  document.getElementById('mgp-ok-btn').style.background = esBene ? '#9333ea' : 'var(--blue)';
+  document.getElementById('modal-gasto-per').classList.add('open');
+}
+
+function cerrarModalGastosPer() {
+  document.getElementById('modal-gasto-per').classList.remove('open');
+}
+
+function guardarGastoPersonal() {
+  const desc   = document.getElementById('mgp-desc').value.trim();
+  const monto  = parseFloat(document.getElementById('mgp-monto').value) || 0;
+  const tipo   = document.getElementById('mgp-tipo-val').value;
+  if (!desc || monto <= 0) { toast('Escribe descripción y monto', 'err'); return; }
+
+  const fechaVal = document.getElementById('mgp-fecha').value || hoyKey();
+  const fechaDisp = new Date(fechaVal+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  const gasto = {
+    id:        gastoPerEditId || Date.now(),
+    tipo,
+    desc,
+    monto,
+    fecha:     fechaDisp,
+    fechaKey:  fechaVal,
+    categoria: document.getElementById('mgp-categoria').value   || '',
+    metodo:    document.getElementById('mgp-metodo').value      || 'Efectivo',
+    obs:       document.getElementById('mgp-obs').value.trim()  || '',
+    imagen:    document.getElementById('mgp-img-data').value    || '',
+    hora:      horaHN(new Date())
+  };
+
+  if (gastoPerEditId) {
+    const idx = gastosPersonales.findIndex(g => g.id == gastoPerEditId);
+    if (idx !== -1) gastosPersonales[idx] = gasto;
+  } else {
+    gastosPersonales.unshift(gasto);
+  }
+
+  // Enviar a Google Sheets en hoja separada
+  enviarGastoAGAS(gasto);
+  saveAll();
+  cerrarModalGastosPer();
+  renderGastosPersonales();
+  toast(`${tipo === 'beneficencia' ? '🤲 Beneficencia' : '🏠 Gasto personal'} guardado ✓`);
+}
+
+function editarGastoPersonal(id) {
+  const g = gastosPersonales.find(x => x.id == id);
+  if (!g) return;
+  gastoPerEditId = g.id;
+  document.getElementById('mgp-edit-id').value    = g.id;
+  document.getElementById('mgp-tipo-val').value   = g.tipo;
+  document.getElementById('mgp-desc').value       = g.desc;
+  document.getElementById('mgp-monto').value      = g.monto;
+  document.getElementById('mgp-fecha').value      = g.fechaKey || hoyKey();
+  document.getElementById('mgp-categoria').value  = g.categoria || '';
+  document.getElementById('mgp-metodo').value     = g.metodo    || 'Efectivo';
+  document.getElementById('mgp-obs').value        = g.obs       || '';
+  if (g.imagen) {
+    document.getElementById('mgp-img-data').value  = g.imagen;
+    document.getElementById('mgp-img-thumb').src   = g.imagen;
+    document.getElementById('mgp-img-preview').style.display = 'block';
+    document.getElementById('mgp-img-clear').style.display   = 'inline-block';
+  } else { limpiarImagenGP(); }
+  const esBene = g.tipo === 'beneficencia';
+  document.getElementById('mgp-titulo').textContent = esBene ? '🤲 Beneficencia' : '🏠 Gasto Personal';
+  document.getElementById('mgp-ok-btn').style.background = esBene ? '#9333ea' : 'var(--blue)';
+  document.getElementById('modal-gasto-per').classList.add('open');
+}
+
+function eliminarGastoPersonal(id) {
+  const g = gastosPersonales.find(x => x.id == id);
+  if (!g || !confirm(`¿Eliminar "${g.desc}" — L ${fmt(g.monto)}?`)) return;
+  gastosPersonales = gastosPersonales.filter(x => x.id != id);
+  saveAll(); renderGastosPersonales();
+  toast('Gasto eliminado', 'err');
+}
+
+async function enviarGastoAGAS(gasto) {
+  const statusEl = document.getElementById('gas-status');
+  const params = new URLSearchParams();
+  params.append('action',    'registro');
+  params.append('sheet',     gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales');
+  params.append('id',        String(gasto.id));
+  params.append('fecha',     gasto.fecha     || '');
+  params.append('hora',      gasto.hora      || '');
+  params.append('descripcion', gasto.desc    || '');
+  params.append('categoria', gasto.categoria || '');
+  params.append('tipo',      'OUT');
+  params.append('monto',     (gasto.monto || 0).toFixed(2));
+  params.append('metodo',    gasto.metodo    || '');
+  params.append('observaciones', gasto.obs   || '');
+  try {
+    await fetch(GAS_URL, { method:'POST', mode:'no-cors', body: params });
+    statusEl.textContent = '✓ GAS: Enviado';
+    statusEl.className   = 'gas-status ok';
+  } catch(e) {
+    gasQueue.push({ params, reg: gasto });
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
+    statusEl.className   = 'gas-status err';
+    setTimeout(flushGasQueue, 15000);
+  }
+}
+
+function renderGastosPersonales() {
+  const lista = document.getElementById('gp-lista');
+  const empty = document.getElementById('gp-empty');
+  const totEl = document.getElementById('gp-totales');
+  if (!lista) return;
+
+  const mesFilter = document.getElementById('fgp-mes').value; // "YYYY-MM" o ""
+
+  let datos = gastosPersonales.filter(g => {
+    if (filtroGP !== 'todos' && g.tipo !== filtroGP) return false;
+    if (mesFilter && g.fechaKey && !g.fechaKey.startsWith(mesFilter)) return false;
+    return true;
+  });
+
+  // Totales
+  const totPer  = gastosPersonales.filter(g=>g.tipo==='personal').reduce((a,b)=>a+b.monto,0);
+  const totBene = gastosPersonales.filter(g=>g.tipo==='beneficencia').reduce((a,b)=>a+b.monto,0);
+  totEl.innerHTML = `
+    <div style="background:var(--blue-bg);border:1px solid var(--bd2);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">🏠 Total Personal</div>
+      <div style="font-family:var(--mono);color:var(--blue);font-size:1.05rem;font-weight:700">L ${fmt(totPer)}</div>
+    </div>
+    <div style="background:var(--pur-bg);border:1px solid #3a1a6e;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">🤲 Total Beneficencia</div>
+      <div style="font-family:var(--mono);color:#c084fc;font-size:1.05rem;font-weight:700">L ${fmt(totBene)}</div>
+    </div>
+    <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">📊 Total Combinado</div>
+      <div style="font-family:var(--mono);color:var(--amber);font-size:1.05rem;font-weight:700">L ${fmt(totPer+totBene)}</div>
+    </div>
+    <div style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">📦 Registros</div>
+      <div style="font-family:var(--mono);color:var(--text2);font-size:1.05rem;font-weight:700">${gastosPersonales.length}</div>
+    </div>`;
+
+  if (!datos.length) { lista.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  lista.innerHTML = datos.map(g => {
+    const esBene = g.tipo === 'beneficencia';
+    const color  = esBene ? '#9333ea' : 'var(--blue)';
+    const icon   = esBene ? '🤲' : '🏠';
+    return `
+    <div style="background:var(--s2);border:1px solid var(--bd2);border-left:4px solid ${color};border-radius:9px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+            <span style="font-size:.72rem;font-weight:800;color:${color}">${icon} ${g.tipo === 'beneficencia' ? 'Beneficencia' : 'Personal'}</span>
+            ${g.categoria ? `<span style="font-size:.6rem;background:var(--s3);border:1px solid var(--bd);color:var(--muted);padding:1px 7px;border-radius:10px">${g.categoria}</span>` : ''}
+          </div>
+          <div style="font-size:.83rem;font-weight:700;color:var(--text);margin-bottom:3px">${g.desc}</div>
+          <div style="font-size:.67rem;color:var(--muted)">${g.fecha} ${g.hora} · ${g.metodo}</div>
+          ${g.obs ? `<div style="font-size:.68rem;color:var(--dim);margin-top:3px;font-style:italic">${g.obs}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--mono);color:var(--red);font-size:1rem;font-weight:700">−L ${fmt(g.monto)}</div>
+          <div style="display:flex;gap:4px;margin-top:5px;justify-content:flex-end">
+            ${g.imagen ? `<button onclick="verImagen('${g.imagen.substring(0,30)}...')" style="background:var(--s3);border:1px solid var(--bd2);color:var(--muted);border-radius:4px;padding:3px 7px;font-size:.6rem;cursor:pointer;font-family:var(--font)" onclick="verImagen(gastosPersonales.find(x=>x.id==${g.id}).imagen)">📷</button>` : ''}
+            <button onclick="editarGastoPersonal(${g.id})" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:4px;padding:3px 7px;font-size:.6rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️</button>
+            <button onclick="eliminarGastoPersonal(${g.id})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:4px;padding:3px 7px;font-size:.6rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
+          </div>
+        </div>
+      </div>
+      ${g.imagen ? `<div style="margin-top:8px"><img src="${g.imagen}" onclick="verImagen(this.src)" style="max-height:80px;border-radius:5px;border:1px solid var(--bd2);cursor:pointer;object-fit:cover"></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   MÓDULO AGENDA & NOTAS
+   ═══════════════════════════════════════════════════════ */
+function abrirModalNota(id) {
+  document.getElementById('mnota-edit-id').value      = id || '';
+  document.getElementById('mnota-titulo').textContent = id ? 'Editar Nota' : 'Nueva Nota';
+  if (id) {
+    const n = agendaNotas.find(x => x.id == id);
+    if (!n) return;
+    document.getElementById('mnota-titulo-val').value   = n.titulo;
+    document.getElementById('mnota-tipo').value         = n.tipo       || 'nota';
+    document.getElementById('mnota-prioridad').value    = n.prioridad  || 'normal';
+    document.getElementById('mnota-fecha-vence').value  = n.fechaVence || '';
+    document.getElementById('mnota-contenido').value    = n.contenido  || '';
+  } else {
+    document.getElementById('mnota-titulo-val').value  = '';
+    document.getElementById('mnota-tipo').value        = 'nota';
+    document.getElementById('mnota-prioridad').value   = 'normal';
+    document.getElementById('mnota-fecha-vence').value = '';
+    document.getElementById('mnota-contenido').value   = '';
+  }
+  document.getElementById('modal-nota').classList.add('open');
+}
+
+function cerrarModalNota() {
+  document.getElementById('modal-nota').classList.remove('open');
+}
+
+function guardarNota() {
+  const titulo = document.getElementById('mnota-titulo-val').value.trim();
+  if (!titulo) { toast('Escribe un título para la nota', 'err'); return; }
+  const editId = document.getElementById('mnota-edit-id').value;
+  const nota = {
+    id:         editId || Date.now(),
+    titulo,
+    tipo:       document.getElementById('mnota-tipo').value        || 'nota',
+    prioridad:  document.getElementById('mnota-prioridad').value   || 'normal',
+    fechaVence: document.getElementById('mnota-fecha-vence').value || '',
+    contenido:  document.getElementById('mnota-contenido').value.trim() || '',
+    fechaCreada: editId ? undefined : fechaHN(new Date()),
+    horaCreada:  editId ? undefined : horaHN(new Date()),
+    estado:     'pendiente'
+  };
+  if (editId) {
+    const idx = agendaNotas.findIndex(n => n.id == editId);
+    if (idx !== -1) agendaNotas[idx] = { ...agendaNotas[idx], ...nota };
+  } else {
+    agendaNotas.unshift(nota);
+  }
+  saveAll(); cerrarModalNota(); renderAgenda();
+  toast('Nota guardada ✓');
+}
+
+function cambiarEstadoNota(id, nuevoEstado) {
+  const idx = agendaNotas.findIndex(n => n.id == id);
+  if (idx === -1) return;
+  agendaNotas[idx].estado = nuevoEstado;
+  saveAll(); renderAgenda();
+  toast(nuevoEstado === 'completado' ? '✅ Marcada como completada' : 'Estado actualizado');
+}
+
+function eliminarNota(id) {
+  const n = agendaNotas.find(x => x.id == id);
+  if (!n || !confirm(`¿Eliminar nota "${n.titulo}"?`)) return;
+  agendaNotas = agendaNotas.filter(x => x.id != id);
+  saveAll(); renderAgenda();
+  toast('Nota eliminada', 'err');
+}
+
+function renderAgenda() {
+  const lista = document.getElementById('agenda-lista');
+  const empty = document.getElementById('agenda-empty');
+  const stats = document.getElementById('ag-stats');
+  if (!lista) return;
+
+  const fTipo   = document.getElementById('fag-tipo').value;
+  const fEstado = document.getElementById('fag-estado').value;
+
+  // Stats
+  const total     = agendaNotas.length;
+  const pendientes= agendaNotas.filter(n=>n.estado==='pendiente').length;
+  const completadas=agendaNotas.filter(n=>n.estado==='completado').length;
+  const hoyStr    = hoyKey();
+  const vencidas  = agendaNotas.filter(n=>n.fechaVence && n.fechaVence < hoyStr && n.estado==='pendiente').length;
+  stats.innerHTML = `
+    <div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px;text-align:center">
+      <div style="font-size:.57rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">Total</div>
+      <div style="font-family:var(--mono);color:var(--text2);font-size:.95rem;font-weight:700">${total}</div>
+    </div>
+    <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:9px;text-align:center">
+      <div style="font-size:.57rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">⏳ Pendientes</div>
+      <div style="font-family:var(--mono);color:var(--amber);font-size:.95rem;font-weight:700">${pendientes}</div>
+    </div>
+    <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:7px;padding:9px;text-align:center">
+      <div style="font-size:.57rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">✅ Completadas</div>
+      <div style="font-family:var(--mono);color:var(--green);font-size:.95rem;font-weight:700">${completadas}</div>
+    </div>
+    <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:7px;padding:9px;text-align:center">
+      <div style="font-size:.57rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">⚠ Vencidas</div>
+      <div style="font-family:var(--mono);color:var(--red);font-size:.95rem;font-weight:700">${vencidas}</div>
+    </div>`;
+
+  let datos = agendaNotas.filter(n => {
+    if (fTipo   && n.tipo   !== fTipo)   return false;
+    if (fEstado && n.estado !== fEstado) return false;
+    return true;
+  });
+
+  if (!datos.length) { lista.innerHTML = ''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+
+  const tipoIcon     = {nota:'📋',tarea:'✅',recordatorio:'⏰',idea:'💡'};
+  const priorColor   = {alta:'var(--red)',media:'var(--amber)',normal:'var(--blue)',baja:'var(--green)'};
+  const priorLabel   = {alta:'🔴 Alta',media:'🟡 Media',normal:'⚪ Normal',baja:'🟢 Baja'};
+  const estadoBg     = {pendiente:'var(--amb-bg)',completado:'var(--grn-bg)',cancelado:'var(--red-bg)'};
+  const estadoColor  = {pendiente:'var(--amber)',completado:'var(--green)',cancelado:'var(--red)'};
+
+  lista.innerHTML = datos.map(n => {
+    const vencida = n.fechaVence && n.fechaVence < hoyStr && n.estado === 'pendiente';
+    return `
+    <div style="background:var(--s2);border:1px solid var(--bd2);border-left:4px solid ${priorColor[n.prioridad]||'var(--blue)'};
+      border-radius:9px;padding:12px 14px;${n.estado==='completado'?'opacity:.65':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap">
+            <span style="font-size:.75rem;font-weight:800;color:var(--text)">${tipoIcon[n.tipo]||'📋'} ${n.titulo}</span>
+            <span style="font-size:.6rem;background:${estadoBg[n.estado]||'var(--s3)'};color:${estadoColor[n.estado]||'var(--muted)'};padding:1px 8px;border-radius:10px;font-weight:700">${n.estado}</span>
+            <span style="font-size:.6rem;color:${priorColor[n.prioridad]};font-weight:700">${priorLabel[n.prioridad]||''}</span>
+            ${vencida ? '<span style="font-size:.6rem;color:var(--red);font-weight:700;background:var(--red-bg);padding:1px 7px;border-radius:10px">⚠ VENCIDA</span>' : ''}
+          </div>
+          ${n.contenido ? `<div style="font-size:.75rem;color:var(--text2);margin-bottom:5px;white-space:pre-wrap;line-height:1.5">${n.contenido}</div>` : ''}
+          <div style="font-size:.63rem;color:var(--muted)">
+            ${n.fechaCreada ? `Creada: ${n.fechaCreada}` : ''}
+            ${n.fechaVence  ? ` · Vence: <strong style="color:${vencida?'var(--red)':'var(--text2)'}">${n.fechaVence}</strong>` : ''}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+          ${n.estado === 'pendiente' ? `
+          <button onclick="cambiarEstadoNota(${n.id},'completado')" style="background:var(--grn-bg);border:1px solid #0a3a1a;color:var(--green);border-radius:5px;padding:4px 8px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700;white-space:nowrap">✅ Completar</button>` : ''}
+          <button onclick="abrirModalNota(${n.id})" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 8px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️ Editar</button>
+          <button onclick="eliminarNota(${n.id})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 8px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+
 </body>
 </html>
