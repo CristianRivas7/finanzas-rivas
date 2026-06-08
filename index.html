@@ -4731,20 +4731,25 @@ function eliminarGastoPersonal(id) {
 
 async function enviarGastoAGAS(gasto) {
   const statusEl = document.getElementById('gas-status');
+  // Agregar sheet como query param en la URL — garantiza que el GAS lo recibe
+  // incluso con mode:'no-cors' que a veces no pasa bien el body
+  const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
+  const url = GAS_URL + '?sheet=' + encodeURIComponent(sheetNombre);
+
   const params = new URLSearchParams();
-  params.append('action',    'registro');
-  params.append('sheet',     gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales');
-  params.append('id',        String(gasto.id));
-  params.append('fecha',     gasto.fecha     || '');
-  params.append('hora',      gasto.hora      || '');
-  params.append('descripcion', gasto.desc    || '');
-  params.append('categoria', gasto.categoria || '');
-  params.append('tipo',      'OUT');
-  params.append('monto',     (gasto.monto || 0).toFixed(2));
-  params.append('metodo',    gasto.metodo    || '');
-  params.append('observaciones', gasto.obs   || '');
+  params.append('action',      'registro');
+  params.append('sheet',       sheetNombre);
+  params.append('id',          String(gasto.id));
+  params.append('fecha',       gasto.fecha     || '');
+  params.append('hora',        gasto.hora      || '');
+  params.append('descripcion', gasto.desc      || '');
+  params.append('categoria',   gasto.categoria || '');
+  params.append('tipo',        'OUT');
+  params.append('monto',       (gasto.monto || 0).toFixed(2));
+  params.append('metodo',      gasto.metodo    || '');
+  params.append('observaciones', gasto.obs     || '');
   try {
-    await fetch(GAS_URL, { method:'POST', mode:'no-cors', body: params });
+    await fetch(url, { method:'POST', mode:'no-cors', body: params });
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
   } catch(e) {
