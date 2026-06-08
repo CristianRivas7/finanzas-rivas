@@ -810,6 +810,8 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 </style>
 </head>
 <body onload="boot()">
+<!-- Iframe oculto para enviar gastos personales/beneficencia al GAS sin restricciones CORS -->
+<iframe id="gas-iframe" style="display:none;width:1px;height:1px" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
 
 <!-- NAV -->
 <nav>
@@ -4729,10 +4731,8 @@ function eliminarGastoPersonal(id) {
   toast('Gasto eliminado', 'err');
 }
 
-async function enviarGastoAGAS(gasto) {
-  const statusEl = document.getElementById('gas-status');
-  // GET con todos los params en la URL — 100% confiable con GAS
-  // Con POST+no-cors el body llega pero GAS a veces no lee 'sheet' correctamente
+function enviarGastoAGAS(gasto) {
+  const statusEl   = document.getElementById('gas-status');
   const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
   const p = new URLSearchParams();
   p.append('action',      'registroGasto');
@@ -4746,17 +4746,19 @@ async function enviarGastoAGAS(gasto) {
   p.append('metodo',      gasto.metodo      || '');
   p.append('obs',         gasto.obs         || '');
   const url = GAS_URL + '?' + p.toString();
+
+  // Usar iframe — navega a la URL del GAS sin restricciones CORS
+  // El GAS procesa el GET y escribe en la hoja correcta
   try {
-    statusEl.textContent = '⏳ Enviando...';
-    statusEl.className   = 'gas-status';
-    await fetch(url, { method: 'GET', mode: 'no-cors' });
+    const iframe = document.getElementById('gas-iframe');
+    iframe.src = url;
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
+    // Limpiar src después de 5s para que no quede cargando
+    setTimeout(() => { try { iframe.src = 'about:blank'; } catch(e){} }, 5000);
   } catch(e) {
-    gasQueue.push({ esGasto: true, url, gasto });
-    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
+    statusEl.textContent = '✗ GAS: Error iframe';
     statusEl.className   = 'gas-status err';
-    setTimeout(flushGasQueue, 15000);
   }
 }
 
