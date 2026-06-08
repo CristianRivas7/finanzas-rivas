@@ -810,7 +810,6 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 </style>
 </head>
 <body onload="boot()">
-<iframe id="gas-iframe" style="display:none;width:1px;height:1px" sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation"></iframe>
 
 <!-- NAV -->
 <nav>
@@ -2090,8 +2089,6 @@ async function syncGAS() {
       registros: registros,
       diezmoTotal: diezmoTotal,
       diezmoHistorial: diezmoHistorial,
-      ofrendaTotal: ofrendaTotal,
-      ofrendaHistorial: ofrendaHistorial,
       sData: sData,
       saldos: collectSaldos(),
       timestamp: new Date().toISOString()
@@ -4732,31 +4729,38 @@ function eliminarGastoPersonal(id) {
   toast('Gasto eliminado', 'err');
 }
 
-function enviarGastoAGAS(gasto) {
+async function enviarGastoAGAS(gasto) {
   const statusEl    = document.getElementById('gas-status');
   const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
-  const p = new URLSearchParams();
-  p.append('action',      'registroGasto');
-  p.append('sheet',       sheetNombre);
-  p.append('id',          String(gasto.id));
-  p.append('fecha',       gasto.fecha       || '');
-  p.append('hora',        gasto.hora        || '');
-  p.append('descripcion', gasto.desc        || '');
-  p.append('categoria',   gasto.categoria   || '');
-  p.append('monto',       (gasto.monto || 0).toFixed(2));
-  p.append('metodo',      gasto.metodo      || '');
-  p.append('obs',         gasto.obs         || '');
-  const url = GAS_URL + '?' + p.toString();
+
+  // Misma lógica que enviarAGoogleSheets (que sí funciona):
+  // POST + no-cors + URLSearchParams
+  // DIFERENCIA: sheet va en la URL para que GAS lo lea siempre de e.parameter
+  const url = GAS_URL + '?sheet=' + encodeURIComponent(sheetNombre);
+
+  const params = new URLSearchParams();
+  params.append('action',      'registroGasto');
+  params.append('id',          String(gasto.id));
+  params.append('fecha',       gasto.fecha       || '');
+  params.append('hora',        gasto.hora        || '');
+  params.append('descripcion', gasto.desc        || '');
+  params.append('categoria',   gasto.categoria   || '');
+  params.append('monto',       (gasto.monto || 0).toFixed(2));
+  params.append('metodo',      gasto.metodo      || '');
+  params.append('obs',         gasto.obs         || '');
+
   try {
-    // iframe navega a la URL del GAS — sin restricciones CORS
-    const iframe = document.getElementById('gas-iframe');
-    iframe.src = url;
+    statusEl.textContent = '⏳ Enviando...';
+    statusEl.className   = 'gas-status';
+    await fetch(url, { method: 'POST', mode: 'no-cors', body: params });
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
-    setTimeout(() => { try { iframe.src = 'about:blank'; } catch(x){} }, 6000);
+    if (gasQueue.length > 0) flushGasQueue();
   } catch(e) {
-    statusEl.textContent = '✗ GAS: Error';
+    gasQueue.push({ esGasto: true, url, params, gasto });
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
     statusEl.className   = 'gas-status err';
+    setTimeout(flushGasQueue, 15000);
   }
 }
 
@@ -4974,7 +4978,6 @@ function renderAgenda() {
     </div>`;
   }).join('');
 }
-
 
 
 </script>
