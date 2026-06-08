@@ -810,8 +810,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 </style>
 </head>
 <body onload="boot()">
-<!-- Iframe oculto para enviar gastos personales/beneficencia al GAS sin restricciones CORS -->
-<iframe id="gas-iframe" style="display:none;width:1px;height:1px" sandbox="allow-scripts allow-forms allow-same-origin"></iframe>
+<iframe id="gas-iframe" style="display:none;width:1px;height:1px" sandbox="allow-scripts allow-forms allow-same-origin allow-top-navigation"></iframe>
 
 <!-- NAV -->
 <nav>
@@ -2091,6 +2090,8 @@ async function syncGAS() {
       registros: registros,
       diezmoTotal: diezmoTotal,
       diezmoHistorial: diezmoHistorial,
+      ofrendaTotal: ofrendaTotal,
+      ofrendaHistorial: ofrendaHistorial,
       sData: sData,
       saldos: collectSaldos(),
       timestamp: new Date().toISOString()
@@ -4732,7 +4733,7 @@ function eliminarGastoPersonal(id) {
 }
 
 function enviarGastoAGAS(gasto) {
-  const statusEl   = document.getElementById('gas-status');
+  const statusEl    = document.getElementById('gas-status');
   const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
   const p = new URLSearchParams();
   p.append('action',      'registroGasto');
@@ -4746,18 +4747,15 @@ function enviarGastoAGAS(gasto) {
   p.append('metodo',      gasto.metodo      || '');
   p.append('obs',         gasto.obs         || '');
   const url = GAS_URL + '?' + p.toString();
-
-  // Usar iframe — navega a la URL del GAS sin restricciones CORS
-  // El GAS procesa el GET y escribe en la hoja correcta
   try {
+    // iframe navega a la URL del GAS — sin restricciones CORS
     const iframe = document.getElementById('gas-iframe');
     iframe.src = url;
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
-    // Limpiar src después de 5s para que no quede cargando
-    setTimeout(() => { try { iframe.src = 'about:blank'; } catch(e){} }, 5000);
+    setTimeout(() => { try { iframe.src = 'about:blank'; } catch(x){} }, 6000);
   } catch(e) {
-    statusEl.textContent = '✗ GAS: Error iframe';
+    statusEl.textContent = '✗ GAS: Error';
     statusEl.className   = 'gas-status err';
   }
 }
@@ -4976,6 +4974,7 @@ function renderAgenda() {
     </div>`;
   }).join('');
 }
+
 
 
 </script>
