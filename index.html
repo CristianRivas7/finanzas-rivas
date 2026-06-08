@@ -4731,29 +4731,29 @@ function eliminarGastoPersonal(id) {
 
 async function enviarGastoAGAS(gasto) {
   const statusEl = document.getElementById('gas-status');
-  // Agregar sheet como query param en la URL — garantiza que el GAS lo recibe
-  // incluso con mode:'no-cors' que a veces no pasa bien el body
+  // GET con todos los params en la URL — 100% confiable con GAS
+  // Con POST+no-cors el body llega pero GAS a veces no lee 'sheet' correctamente
   const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
-  const url = GAS_URL + '?sheet=' + encodeURIComponent(sheetNombre);
-
-  const params = new URLSearchParams();
-  params.append('action',      'registro');
-  params.append('sheet',       sheetNombre);
-  params.append('id',          String(gasto.id));
-  params.append('fecha',       gasto.fecha     || '');
-  params.append('hora',        gasto.hora      || '');
-  params.append('descripcion', gasto.desc      || '');
-  params.append('categoria',   gasto.categoria || '');
-  params.append('tipo',        'OUT');
-  params.append('monto',       (gasto.monto || 0).toFixed(2));
-  params.append('metodo',      gasto.metodo    || '');
-  params.append('observaciones', gasto.obs     || '');
+  const p = new URLSearchParams();
+  p.append('action',      'registroGasto');
+  p.append('sheet',       sheetNombre);
+  p.append('id',          String(gasto.id));
+  p.append('fecha',       gasto.fecha       || '');
+  p.append('hora',        gasto.hora        || '');
+  p.append('descripcion', gasto.desc        || '');
+  p.append('categoria',   gasto.categoria   || '');
+  p.append('monto',       (gasto.monto || 0).toFixed(2));
+  p.append('metodo',      gasto.metodo      || '');
+  p.append('obs',         gasto.obs         || '');
+  const url = GAS_URL + '?' + p.toString();
   try {
-    await fetch(url, { method:'POST', mode:'no-cors', body: params });
+    statusEl.textContent = '⏳ Enviando...';
+    statusEl.className   = 'gas-status';
+    await fetch(url, { method: 'GET', mode: 'no-cors' });
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
   } catch(e) {
-    gasQueue.push({ params, reg: gasto });
+    gasQueue.push({ esGasto: true, url, gasto });
     statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
     statusEl.className   = 'gas-status err';
     setTimeout(flushGasQueue, 15000);
