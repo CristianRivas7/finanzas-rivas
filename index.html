@@ -4733,13 +4733,11 @@ async function enviarGastoAGAS(gasto) {
   const statusEl    = document.getElementById('gas-status');
   const sheetNombre = gasto.tipo === 'beneficencia' ? 'Beneficencia' : 'GastosPersonales';
 
-  // Misma lógica que enviarAGoogleSheets (que sí funciona):
-  // POST + no-cors + URLSearchParams
-  // DIFERENCIA: sheet va en la URL para que GAS lo lea siempre de e.parameter
-  const url = GAS_URL + '?sheet=' + encodeURIComponent(sheetNombre);
-
+  // EXACTAMENTE el mismo patrón que enviarAGoogleSheets que sí funciona:
+  // POST + no-cors + URLSearchParams + misma GAS_URL sin nada extra
   const params = new URLSearchParams();
   params.append('action',      'registroGasto');
+  params.append('sheet',       sheetNombre);
   params.append('id',          String(gasto.id));
   params.append('fecha',       gasto.fecha       || '');
   params.append('hora',        gasto.hora        || '');
@@ -4752,12 +4750,17 @@ async function enviarGastoAGAS(gasto) {
   try {
     statusEl.textContent = '⏳ Enviando...';
     statusEl.className   = 'gas-status';
-    await fetch(url, { method: 'POST', mode: 'no-cors', body: params });
+    await fetch(GAS_URL, {
+      method: 'POST',
+      mode:   'no-cors',
+      body:   params
+    });
     statusEl.textContent = '✓ GAS: Enviado';
     statusEl.className   = 'gas-status ok';
     if (gasQueue.length > 0) flushGasQueue();
   } catch(e) {
-    gasQueue.push({ esGasto: true, url, params, gasto });
+    console.warn('GAS gasto falló:', e);
+    gasQueue.push({ esGasto: true, params, gasto });
     statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
     statusEl.className   = 'gas-status err';
     setTimeout(flushGasQueue, 15000);
