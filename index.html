@@ -2051,7 +2051,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwdMHzlXz9WoAh_VUouLJF5Sb5Ya3DOaTb_9PgCFY08Qei6K6QnxyZ81j1TskcmnrxPTg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxCVedVmaGkX9-MOKKHFP46iI5OS8J0hQt0CL7DhfCxjlHa9Yg5r6CwPFe_lhOsKyU74A/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -2182,6 +2182,20 @@ async function loadFromGAS() {
     } else {
       statusEl.textContent = '⚡ GAS: Listo';
       statusEl.className = 'gas-status ok';
+    }
+
+    // ── Cargar proyectos desde Sheets ─────────────────────────────
+    if (data && data.proyectos && data.proyectos.length > 0) {
+      const idsLocProy = new Set(proyectos.map(p => String(p.id)));
+      const proyNuevos = data.proyectos.filter(p => !idsLocProy.has(String(p.id)));
+      if (proyNuevos.length > 0) {
+        proyectos = [...proyNuevos, ...proyectos];
+      } else if (proyectos.length === 0) {
+        proyectos = data.proyectos;
+      }
+      saveAll();
+      renderProyectos();
+      poblarSelectorProyectos();
     }
   } catch (e) {
     statusEl.textContent = '⚡ GAS: Local';
@@ -2701,6 +2715,32 @@ function cerrarProyecto() {
   document.getElementById('modal-proyecto').classList.remove('open');
 }
 
+/* ═══ ENVIAR PROYECTO A GOOGLE SHEETS ═══ */
+async function enviarProyectoAGAS(proy, subaction) {
+  // subaction = 'guardar' | 'eliminar'
+  try {
+    const params = new URLSearchParams();
+    params.append('action',      'proyecto');
+    params.append('subaction',   subaction || 'guardar');
+    params.append('id',          String(proy.id));
+    params.append('nombre',      proy.nombre      || '');
+    params.append('cliente',     proy.cliente     || '');
+    params.append('fechaInicio', proy.fechaInicio || '');
+    params.append('fechaFin',    proy.fechaFin    || '');
+    params.append('estado',      proy.estado      || 'activo');
+    params.append('monto',       (proy.monto    || 0).toFixed(2));
+    params.append('abono',       (proy.abono    || 0).toFixed(2));
+    params.append('costo',       (proy.costo    || 0).toFixed(2));
+    params.append('ganancia',    (proy.ganancia || 0).toFixed(2));
+    params.append('saldo',       (proy.saldo    || 0).toFixed(2));
+    params.append('desc',        proy.desc        || '');
+    params.append('fechaCreado', proy.fechaCreado || '');
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+  } catch (e) {
+    console.warn('enviarProyectoAGAS error:', e);
+  }
+}
+
 function guardarProyecto() {
   const nombre = document.getElementById('proy-nombre').value.trim();
   if (!nombre) { toast('Escribe el nombre del proyecto', 'err'); return; }
@@ -2733,6 +2773,7 @@ function guardarProyecto() {
   }
 
   saveAll();
+  enviarProyectoAGAS(proy, 'guardar');
   cerrarProyecto();
   renderProyectos();
   poblarSelectorProyectos();
@@ -2763,6 +2804,7 @@ function eliminarProyecto(id) {
   if (!confirm(`¿Eliminar el proyecto "${p.nombre}"?\n\nLos registros asociados NO se borran.`)) return;
   proyectos = proyectos.filter(x => x.id !== id);
   saveAll();
+  enviarProyectoAGAS(p, 'eliminar');
   renderProyectos();
   poblarSelectorProyectos();
   toast('Proyecto eliminado', 'err');
