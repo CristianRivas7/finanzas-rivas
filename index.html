@@ -3831,6 +3831,11 @@ function getFiltrados() {
     if (desde  && r.fechaKey && r.fechaKey < desde) return false;
     if (hasta  && r.fechaKey && r.fechaKey > hasta) return false;
     return true;
+  }).sort((a, b) => {
+    // Ordenar por fecha descendente, luego por hora descendente
+    const fA = (a.fechaKey || '') + ' ' + (a.hora || '');
+    const fB = (b.fechaKey || '') + ' ' + (b.hora || '');
+    return fB.localeCompare(fA);
   });
 }
 
@@ -3892,7 +3897,7 @@ function renderHistorial() {
         <th>Hora</th><th>Descripción</th><th>Cuenta</th><th>Proyecto</th><th>Diezmo</th><th>Ofrenda</th><th>Tipo</th><th>Neto</th><th>✏️</th>
       </tr></thead>
       <tbody>
-        ${grupos[k].map(r => `<tr>
+        ${grupos[k].sort((a,b) => (b.hora||'').localeCompare(a.hora||'')).map(r => `<tr>
           <td style="font-family:var(--mono);color:var(--muted)">${r.hora}</td>
           <td style="color:var(--text)">${r.desc}${r.observaciones?`<br><span style="font-size:.65rem;color:var(--muted)">${r.observaciones}</span>`:''}${r.tipoMov&&r.tipoMov!=='normal'?`<br><span style="font-size:.63rem;color:var(--blue)">${r.tipoMov}</span>`:''}</td>
           <td style="color:var(--muted);font-size:.73rem">${r.bancoNombre}</td>
