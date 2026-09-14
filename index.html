@@ -829,6 +829,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <button class="tab-btn" onclick="tab('v-cal',this)">Calendario</button>
     <button class="tab-btn" onclick="tab('v-inv',this)">📦 Inventario</button>
     <button class="tab-btn" onclick="tab('v-proyectos',this)">📋 Proyectos</button>
+    <button class="tab-btn" onclick="tab('v-creditos',this)">💳 Créditos</button>
     <button class="tab-btn" onclick="tab('v-gastos-per',this)">🏠 Personal</button>
     <button class="tab-btn" onclick="tab('v-agenda',this)">📝 Agenda</button>
   </div>
@@ -1564,6 +1565,34 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- VISTA CRÉDITOS -->
+<div id="v-creditos" class="view">
+  <div style="padding:12px;max-width:1100px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:800;color:var(--text)">💳 Créditos · Cuentas por Cobrar y Pagar</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-save" onclick="abrirModalCredito('dado')" style="padding:7px 14px;font-size:.73rem;background:var(--green)">📤 Crédito a Cliente</button>
+        <button class="btn-save" onclick="abrirModalCredito('recibido')" style="padding:7px 14px;font-size:.73rem;background:var(--orange)">📥 Crédito de Proveedor</button>
+      </div>
+    </div>
+    <!-- Totales -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:14px" id="cred-totales"></div>
+    <!-- Filtros -->
+    <div style="display:flex;gap:7px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:.67rem;color:var(--muted);font-weight:700">Filtrar:</span>
+      <button onclick="filtroCredito='todos';renderCreditos()" id="fcr-todos" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--acc-bg);color:var(--acc);border:1px solid var(--acc);font-family:var(--font)">Todos</button>
+      <button onclick="filtroCredito='pendiente';renderCreditos()" id="fcr-pendiente" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--amb-bg);color:var(--amber);border:1px solid var(--bd2);font-family:var(--font)">⏳ Pendientes</button>
+      <button onclick="filtroCredito='cancelado';renderCreditos()" id="fcr-cancelado" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--grn-bg);color:var(--green);border:1px solid var(--bd2);font-family:var(--font)">✅ Cancelados</button>
+      <button onclick="filtroCredito='entregado';renderCreditos()" id="fcr-entregado" style="padding:4px 11px;border-radius:6px;font-size:.67rem;font-weight:700;cursor:pointer;background:var(--blue-bg);color:var(--blue);border:1px solid var(--bd2);font-family:var(--font)">📦 Entregados</button>
+    </div>
+    <!-- Lista -->
+    <div id="cred-lista" style="display:flex;flex-direction:column;gap:8px"></div>
+    <div id="cred-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:.82rem;display:none">
+      Sin créditos registrados. Agrega uno con los botones de arriba.
+    </div>
+  </div>
+</div>
+
 <!-- VISTA GASTOS PERSONALES Y BENEFICENCIA -->
 <div id="v-gastos-per" class="view">
   <div style="padding:12px;max-width:1000px;margin:0 auto">
@@ -1675,6 +1704,64 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <div class="modal-btns" style="margin-top:12px">
       <button class="mbtn-cancel" onclick="cerrarProyecto()">Cancelar</button>
       <button class="mbtn-ok" onclick="guardarProyecto()">💾 Guardar Proyecto</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO/EDITAR CRÉDITO -->
+<div class="overlay" id="modal-credito" onclick="if(event.target===this)cerrarModalCredito()">
+  <div class="modal" style="max-width:440px;width:95%">
+    <h3 style="margin-bottom:12px"><span id="mcred-icono">💳</span> <span id="mcred-titulo">Nuevo Crédito</span></h3>
+    <input type="hidden" id="mcred-edit-id">
+    <input type="hidden" id="mcred-tipo-val">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="mcred-nombre" class="pi" placeholder="Nombre del cliente/proveedor" style="margin:0">
+      <div style="display:flex;gap:6px">
+        <input type="date" id="mcred-fecha" class="pi" style="margin:0;flex:1">
+        <input type="number" id="mcred-monto" class="pi" placeholder="Monto total (Lps)" min="0" step="0.01" style="margin:0;flex:1">
+      </div>
+      <select id="mcred-metodo" class="pi" style="margin:0;font-size:.77rem">
+        <option value="">💳 Método de pago...</option>
+        <option value="Efectivo">💵 Efectivo</option>
+        <option value="Transferencia">🏦 Transferencia</option>
+        <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+        <option value="Tarjeta Crédito">💳 Tarjeta Crédito</option>
+        <option value="Cheque">📄 Cheque</option>
+        <option value="Depósito">🏧 Depósito</option>
+        <option value="Otro">🔹 Otro</option>
+      </select>
+      <textarea id="mcred-desc" class="pi" placeholder="Descripción / motivo del crédito..." rows="2" style="margin:0;resize:vertical;font-size:.77rem"></textarea>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalCredito()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarCredito()">💾 Guardar Crédito</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REGISTRAR ABONO -->
+<div class="overlay" id="modal-abono" onclick="if(event.target===this)cerrarModalAbono()">
+  <div class="modal" style="max-width:400px;width:95%">
+    <h3 style="color:var(--amber);margin-bottom:12px">💰 Registrar Abono</h3>
+    <input type="hidden" id="mab-credito-id">
+    <div id="mab-info" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px;margin-bottom:9px;font-size:.75rem;color:var(--text2)"></div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;gap:6px">
+        <input type="date" id="mab-fecha" class="pi" style="margin:0;flex:1">
+        <input type="number" id="mab-monto" class="pi" placeholder="Monto del abono (Lps)" min="0.01" step="0.01" style="margin:0;flex:1" oninput="previewAbono()">
+      </div>
+      <select id="mab-metodo" class="pi" style="margin:0;font-size:.77rem">
+        <option value="Efectivo">💵 Efectivo</option>
+        <option value="Transferencia">🏦 Transferencia</option>
+        <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+        <option value="Depósito">🏧 Depósito</option>
+        <option value="Otro">🔹 Otro</option>
+      </select>
+      <div id="mab-preview" style="font-family:var(--mono);font-size:.78rem;color:var(--muted)"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalAbono()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarAbono()">💾 Guardar Abono</button>
     </div>
   </div>
 </div>
@@ -2056,6 +2143,9 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbzyCl0lr12tMh836VLJ2osF
 /* ═══ ESTADO ═══ */
 let registros = [];
 let proyectos = [];
+let creditos = [];
+let creditoEditId = null;
+let filtroCredito = 'todos';
 let gastosPersonales = [];
 let agendaNotas = [];
 let filtroGP = 'todos';
@@ -2241,6 +2331,7 @@ function tab(id, btn) {
   if (id === 'v-reg')        renderReg();
   if (id === 'v-inv')        invRender();
   if (id === 'v-proyectos')  renderProyectos();
+  if (id === 'v-creditos')   renderCreditos();
   if (id === 'v-agenda')     renderAgenda();
   if (id === 'v-gastos-per') renderGastosPersonales();
 }
@@ -3011,8 +3102,55 @@ function guardarEdicion() {
   calcular();
   renderDiezmoHist();
   renderOfrendaHist();
+  actualizarRegistroGAS(registros[idx]);
   cerrarEditar();
   toast('✓ Registro actualizado');
+}
+
+/* Envía la edición a Google Sheets buscando y reemplazando la fila por ID,
+   sin importar cuántos días hayan pasado desde que se creó el registro. */
+async function actualizarRegistroGAS(reg) {
+  const statusEl = document.getElementById('gas-status');
+  const params = new URLSearchParams();
+  params.append('action',           'actualizarRegistro');
+  params.append('id',               String(reg.id));
+  params.append('fecha',            reg.fecha              || '');
+  params.append('hora',             reg.hora               || '');
+  params.append('descripcion',      reg.desc               || '');
+  params.append('cliente',          reg.tipoContacto === 'cliente'   ? (reg.cliente || '') : '');
+  params.append('proveedor',        reg.tipoContacto === 'proveedor' ? (reg.cliente || '') : '');
+  params.append('categoria',        reg.categoria          || '');
+  params.append('tipo',             reg.tipo               || '');
+  params.append('montoBruto',       (reg.bruto || reg.neto || 0).toFixed(2));
+  params.append('costo',            (reg.costo    || 0).toFixed(2));
+  params.append('ganancia',         (reg.ganancia || 0).toFixed(2));
+  params.append('comision',         (reg.comision || 0).toFixed(2));
+  params.append('cuenta',           reg.bancoNombre        || '');
+  params.append('anticipo',         reg.tipoMov === 'adelanto'        ? (reg.neto||0).toFixed(2) : '0.00');
+  params.append('saldos',           reg.tipoMov === 'saldo'           ? (reg.neto||0).toFixed(2) : '0.00');
+  params.append('neto',             (reg.neto || 0).toFixed(2));
+  params.append('diezmos',          (reg.diezmo  || 0).toFixed(2));
+  params.append('ofrendas',         (reg.ofrenda || 0).toFixed(2));
+  params.append('diezmosPagados',   diezmoPagado  ? 'Sí' : 'No');
+  params.append('ofrendasPagadas',  ofrendaPagada ? 'Sí' : 'No');
+  params.append('estadoPago',       reg.pagado             || 'Sí');
+  params.append('metodoPago',       reg.metodoPago         || '');
+  params.append('observaciones',    reg.observaciones      || '');
+  try {
+    statusEl.textContent = '⏳ Actualizando...';
+    statusEl.className   = 'gas-status';
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+    statusEl.textContent = '✓ GAS: Edición sincronizada';
+    statusEl.className   = 'gas-status ok';
+    if (gasQueue.length > 0) flushGasQueue();
+  } catch (e) {
+    console.warn('GAS actualización falló (sin conexión):', e);
+    gasQueue.push({ params, reg });
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
+    statusEl.className   = 'gas-status err';
+    toast('Sin internet — edición guardada local. Se enviará al reconectar ✓', 'warn');
+    setTimeout(flushGasQueue, 15000);
+  }
 }
 
 function eliminarRegistro(id) {
@@ -3959,6 +4097,7 @@ function saveAll() {
   state['pocket-val']= document.getElementById('pocket-val').value;
   localStorage.setItem('cr_pro', JSON.stringify({registros, state}));
   localStorage.setItem('cr_proyectos', JSON.stringify(proyectos));
+  localStorage.setItem('cr_creditos', JSON.stringify(creditos));
   localStorage.setItem('cr_sdata', JSON.stringify(sData));
   localStorage.setItem('cr_diezmo', JSON.stringify({total: diezmoTotal, historial: diezmoHistorial, pagado: diezmoPagado}));
   localStorage.setItem('cr_ofrenda', JSON.stringify({total: ofrendaTotal, historial: ofrendaHistorial, pagada: ofrendaPagada}));
@@ -3980,6 +4119,9 @@ function loadAll() {
   }
   const pz = JSON.parse(localStorage.getItem('cr_proyectos') || 'null');
   if (pz) proyectos = pz;
+
+  const crz = JSON.parse(localStorage.getItem('cr_creditos') || 'null');
+  if (crz) creditos = crz;
 
   const dz = JSON.parse(localStorage.getItem('cr_diezmo') || 'null');
   if (dz) {
@@ -4009,6 +4151,7 @@ function loadAll() {
   renderOfrendaHist();
   renderHistorialCierres();
   renderProyectos();
+  renderCreditos();
 }
 
 /* ═══ EXPORTAR CSV ═══ */
@@ -4878,6 +5021,287 @@ function renderGastosPersonales() {
         </div>
       </div>
       ${g.imagen ? `<div style="margin-top:8px"><img src="${g.imagen}" onclick="verImagen(this.src)" style="max-height:80px;border-radius:5px;border:1px solid var(--bd2);cursor:pointer;object-fit:cover"></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   MÓDULO CRÉDITOS — cuentas por cobrar (clientes) y por pagar (proveedores)
+   Cada crédito lleva su propio historial de abonos; el total abonado y el
+   saldo se recalculan automáticamente cada vez que se agrega un abono.
+   ═══════════════════════════════════════════════════════ */
+function abrirModalCredito(tipo) {
+  creditoEditId = null;
+  document.getElementById('mcred-edit-id').value  = '';
+  document.getElementById('mcred-tipo-val').value = tipo;
+  document.getElementById('mcred-nombre').value   = '';
+  document.getElementById('mcred-fecha').value    = hoyKey();
+  document.getElementById('mcred-monto').value    = '';
+  document.getElementById('mcred-metodo').value   = '';
+  document.getElementById('mcred-desc').value     = '';
+  const esDado = tipo === 'dado';
+  document.getElementById('mcred-icono').textContent  = esDado ? '📤' : '📥';
+  document.getElementById('mcred-titulo').textContent = esDado ? 'Crédito a Cliente' : 'Crédito de Proveedor';
+  document.getElementById('modal-credito').classList.add('open');
+}
+
+function cerrarModalCredito() {
+  document.getElementById('modal-credito').classList.remove('open');
+}
+
+function guardarCredito() {
+  const nombre = document.getElementById('mcred-nombre').value.trim();
+  const monto  = parseFloat(document.getElementById('mcred-monto').value) || 0;
+  if (!nombre || monto <= 0) { toast('Escribe el nombre y el monto del crédito', 'err'); return; }
+
+  const fechaVal  = document.getElementById('mcred-fecha').value || hoyKey();
+  const fechaDisp = new Date(fechaVal+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const tipo = document.getElementById('mcred-tipo-val').value || 'dado';
+
+  let credito;
+  if (creditoEditId) {
+    const idx = creditos.findIndex(c => c.id == creditoEditId);
+    if (idx === -1) return;
+    creditos[idx] = {
+      ...creditos[idx],
+      tipo, nombre,
+      fecha: fechaDisp, fechaKey: fechaVal,
+      monto,
+      metodo: document.getElementById('mcred-metodo').value     || '',
+      desc:   document.getElementById('mcred-desc').value.trim() || ''
+    };
+    recalcCredito(creditos[idx]);
+    credito = creditos[idx];
+  } else {
+    credito = {
+      id: Date.now(),
+      tipo, nombre,
+      fecha: fechaDisp, fechaKey: fechaVal,
+      monto,
+      abonos: [],
+      abonado: 0,
+      saldo: monto,
+      estado: 'pendiente',
+      fechaCancelado: '',
+      metodo: document.getElementById('mcred-metodo').value     || '',
+      desc:   document.getElementById('mcred-desc').value.trim() || ''
+    };
+    creditos.unshift(credito);
+  }
+  enviarCreditoAGAS(credito);
+
+  saveAll();
+  cerrarModalCredito();
+  renderCreditos();
+  toast(`${tipo === 'dado' ? '📤 Crédito a cliente' : '📥 Crédito de proveedor'} guardado ✓`);
+}
+
+function editarCredito(id) {
+  const c = creditos.find(x => x.id == id);
+  if (!c) return;
+  creditoEditId = c.id;
+  document.getElementById('mcred-edit-id').value  = c.id;
+  document.getElementById('mcred-tipo-val').value = c.tipo;
+  document.getElementById('mcred-nombre').value   = c.nombre;
+  document.getElementById('mcred-fecha').value    = c.fechaKey || hoyKey();
+  document.getElementById('mcred-monto').value    = c.monto;
+  document.getElementById('mcred-metodo').value   = c.metodo || '';
+  document.getElementById('mcred-desc').value     = c.desc   || '';
+  const esDado = c.tipo === 'dado';
+  document.getElementById('mcred-icono').textContent  = esDado ? '📤' : '📥';
+  document.getElementById('mcred-titulo').textContent = 'Editar Crédito';
+  document.getElementById('modal-credito').classList.add('open');
+}
+
+function eliminarCredito(id) {
+  const c = creditos.find(x => x.id == id);
+  if (!c || !confirm(`¿Eliminar el crédito de "${c.nombre}" — L ${fmt(c.monto)}?\n\nEsta acción no se puede deshacer.`)) return;
+  creditos = creditos.filter(x => x.id != id);
+  saveAll(); renderCreditos();
+  enviarCreditoAGAS({ id: c.id }, 'eliminar');
+  toast('Crédito eliminado', 'err');
+}
+
+/* Recalcula total abonado, saldo y estado a partir del historial de abonos */
+function recalcCredito(c) {
+  c.abonado = (c.abonos || []).reduce((a, b) => a + b.monto, 0);
+  c.saldo   = Math.max(0, c.monto - c.abonado);
+  if (c.saldo <= 0 && c.estado !== 'entregado') {
+    c.estado = 'cancelado';
+    if (!c.fechaCancelado) c.fechaCancelado = fechaHN(new Date());
+  } else if (c.saldo > 0 && c.abonado > 0) {
+    c.estado = 'abonado';
+  } else if (c.saldo > 0) {
+    c.estado = 'pendiente';
+  }
+}
+
+function abrirModalAbono(id) {
+  const c = creditos.find(x => x.id == id);
+  if (!c) return;
+  document.getElementById('mab-credito-id').value = id;
+  document.getElementById('mab-fecha').value       = hoyKey();
+  document.getElementById('mab-monto').value       = '';
+  document.getElementById('mab-metodo').value      = 'Efectivo';
+  document.getElementById('mab-info').innerHTML = `
+    <strong>${c.nombre}</strong> · ${c.tipo === 'dado' ? '📤 Crédito a cliente' : '📥 Crédito de proveedor'}<br>
+    Monto total: L ${fmt(c.monto)} · Abonado: L ${fmt(c.abonado)} ·
+    Saldo pendiente: <strong style="color:var(--amber)">L ${fmt(c.saldo)}</strong>`;
+  document.getElementById('mab-preview').textContent = '';
+  document.getElementById('modal-abono').classList.add('open');
+}
+
+function cerrarModalAbono() {
+  document.getElementById('modal-abono').classList.remove('open');
+}
+
+function previewAbono() {
+  const id = document.getElementById('mab-credito-id').value;
+  const c  = creditos.find(x => x.id == id);
+  const monto = parseFloat(document.getElementById('mab-monto').value) || 0;
+  const el = document.getElementById('mab-preview');
+  if (!c || monto <= 0) { el.textContent = ''; return; }
+  const nuevoSaldo = Math.max(0, c.saldo - monto);
+  el.textContent = `Saldo después del abono: L ${fmt(nuevoSaldo)}` + (nuevoSaldo <= 0 ? ' — ✅ Queda cancelado' : '');
+}
+
+function guardarAbono() {
+  const id = document.getElementById('mab-credito-id').value;
+  const c  = creditos.find(x => x.id == id);
+  if (!c) return;
+  const monto = parseFloat(document.getElementById('mab-monto').value) || 0;
+  if (monto <= 0) { toast('Escribe el monto del abono', 'err'); return; }
+
+  const fechaVal  = document.getElementById('mab-fecha').value || hoyKey();
+  const fechaDisp = new Date(fechaVal+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  c.abonos = c.abonos || [];
+  c.abonos.unshift({ fecha: fechaDisp, fechaKey: fechaVal, monto, metodo: document.getElementById('mab-metodo').value || 'Efectivo' });
+  recalcCredito(c);
+
+  saveAll();
+  cerrarModalAbono();
+  renderCreditos();
+  enviarCreditoAGAS(c);
+  toast(c.saldo <= 0 ? '✅ Abono guardado — crédito cancelado' : `Abono de L ${fmt(monto)} guardado ✓`);
+}
+
+function marcarCreditoEntregado(id) {
+  const c = creditos.find(x => x.id == id);
+  if (!c) return;
+  if (!confirm(`¿Marcar el crédito de "${c.nombre}" como entregado?`)) return;
+  c.estado = 'entregado';
+  saveAll(); renderCreditos();
+  enviarCreditoAGAS(c);
+  toast('📦 Crédito marcado como entregado');
+}
+
+async function enviarCreditoAGAS(credito, subaction) {
+  const statusEl = document.getElementById('gas-status');
+  const params = new URLSearchParams();
+  params.append('action',    'credito');
+  params.append('subaction', subaction || 'guardar');
+  params.append('id',        String(credito.id));
+  if ((subaction || 'guardar') !== 'eliminar') {
+    params.append('tipo',           credito.tipo   || '');
+    params.append('nombre',         credito.nombre || '');
+    params.append('fecha',          credito.fecha  || '');
+    params.append('monto',          (credito.monto   || 0).toFixed(2));
+    params.append('abonado',        (credito.abonado || 0).toFixed(2));
+    params.append('saldo',          (credito.saldo   || 0).toFixed(2));
+    params.append('estado',         credito.estado || 'pendiente');
+    params.append('desc',           credito.desc   || '');
+    params.append('metodo',         credito.metodo || '');
+    params.append('fechaCancelado', credito.fechaCancelado || '');
+  }
+  try {
+    statusEl.textContent = '⏳ Enviando...';
+    statusEl.className   = 'gas-status';
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+    statusEl.textContent = '✓ GAS: Enviado';
+    statusEl.className   = 'gas-status ok';
+    if (gasQueue.length > 0) flushGasQueue();
+  } catch (e) {
+    console.warn('GAS crédito falló (sin conexión):', e);
+    gasQueue.push({ params, credito });
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
+    statusEl.className   = 'gas-status err';
+    toast('Sin internet — guardado local. Se enviará al reconectar ✓', 'warn');
+    setTimeout(flushGasQueue, 15000);
+  }
+}
+
+function renderCreditos() {
+  const lista = document.getElementById('cred-lista');
+  const empty = document.getElementById('cred-empty');
+  const totEl = document.getElementById('cred-totales');
+  if (!lista) return;
+
+  const porCobrar   = creditos.filter(c => c.tipo === 'dado').reduce((a,b) => a + b.saldo, 0);
+  const porPagar    = creditos.filter(c => c.tipo === 'recibido').reduce((a,b) => a + b.saldo, 0);
+  const totalAbonado= creditos.reduce((a,b) => a + (b.abonado || 0), 0);
+  const cancelados  = creditos.filter(c => c.estado === 'cancelado' || c.estado === 'entregado').length;
+
+  totEl.innerHTML = `
+    <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">📤 Por Cobrar</div>
+      <div style="font-family:var(--mono);color:var(--green);font-size:1.05rem;font-weight:700">L ${fmt(porCobrar)}</div>
+    </div>
+    <div style="background:var(--ora-bg);border:1px solid #3d2400;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">📥 Por Pagar</div>
+      <div style="font-family:var(--mono);color:var(--orange);font-size:1.05rem;font-weight:700">L ${fmt(porPagar)}</div>
+    </div>
+    <div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Total Abonado</div>
+      <div style="font-family:var(--mono);color:var(--amber);font-size:1.05rem;font-weight:700">L ${fmt(totalAbonado)}</div>
+    </div>
+    <div style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">✅ Cancelados/Entregados</div>
+      <div style="font-family:var(--mono);color:var(--text2);font-size:1.05rem;font-weight:700">${cancelados}</div>
+    </div>`;
+
+  let datos = creditos.filter(c => {
+    if (filtroCredito === 'todos') return true;
+    return c.estado === filtroCredito;
+  });
+
+  if (!datos.length) { lista.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+
+  const estadoBg    = { pendiente: 'var(--amb-bg)', abonado: 'var(--blue-bg)', cancelado: 'var(--grn-bg)', entregado: 'var(--s3)' };
+  const estadoColor = { pendiente: 'var(--amber)',  abonado: 'var(--blue)',  cancelado: 'var(--green)',  entregado: 'var(--text2)' };
+  const estadoLabel = { pendiente: '⏳ Pendiente',  abonado: '🔸 Abonado',  cancelado: '✅ Cancelado',  entregado: '📦 Entregado' };
+
+  lista.innerHTML = datos.map(c => {
+    const pct = c.monto > 0 ? Math.min(100, Math.round((c.abonado / c.monto) * 100)) : 0;
+    return `
+    <div style="background:var(--s2);border:1px solid var(--bd2);border-radius:9px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px;flex-wrap:wrap">
+            <span style="font-size:.8rem;font-weight:800;color:var(--text)">${c.tipo === 'dado' ? '📤' : '📥'} ${c.nombre}</span>
+            <span style="font-size:.6rem;background:${estadoBg[c.estado]||'var(--s3)'};color:${estadoColor[c.estado]||'var(--muted)'};padding:1px 8px;border-radius:10px;font-weight:700">${estadoLabel[c.estado]||c.estado}</span>
+          </div>
+          <div style="font-size:.68rem;color:var(--muted)">${c.fecha}${c.metodo?` · ${c.metodo}`:''}</div>
+          ${c.desc ? `<div style="font-size:.7rem;color:var(--dim);margin-top:3px;font-style:italic">${c.desc}</div>` : ''}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--mono);font-size:.95rem;font-weight:700;color:var(--text)">L ${fmt(c.monto)}</div>
+          <div style="font-size:.66rem;color:var(--muted)">Saldo: <strong style="color:${c.saldo>0?'var(--amber)':'var(--green)'}">L ${fmt(c.saldo)}</strong></div>
+        </div>
+      </div>
+      <div style="background:var(--s1);border-radius:6px;height:6px;margin-top:9px;overflow:hidden">
+        <div style="background:var(--acc);height:100%;width:${pct}%"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:6px">
+        <span style="font-size:.65rem;color:var(--muted)">Abonado: L ${fmt(c.abonado)} (${pct}%)</span>
+        <div style="display:flex;gap:5px;flex-wrap:wrap">
+          ${c.saldo > 0 ? `<button onclick="abrirModalAbono(${c.id})" style="background:var(--amb-bg);border:1px solid #3d2a00;color:var(--amber);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">💰 Abono</button>` : ''}
+          ${c.saldo <= 0 && c.estado !== 'entregado' ? `<button onclick="marcarCreditoEntregado(${c.id})" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">📦 Entregado</button>` : ''}
+          <button onclick="editarCredito(${c.id})" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️</button>
+          <button onclick="eliminarCredito(${c.id})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
+        </div>
+      </div>
     </div>`;
   }).join('');
 }
