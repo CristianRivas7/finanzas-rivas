@@ -1718,7 +1718,11 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <input type="text" id="mcred-nombre" class="pi" placeholder="Nombre del cliente/proveedor" style="margin:0">
       <div style="display:flex;gap:6px">
         <input type="date" id="mcred-fecha" class="pi" style="margin:0;flex:1">
-        <input type="number" id="mcred-monto" class="pi" placeholder="Monto total (Lps)" min="0" step="0.01" style="margin:0;flex:1">
+        <input type="number" id="mcred-monto" class="pi" placeholder="Monto total (Lps)" min="0" step="0.01" style="margin:0;flex:1" oninput="calcGananciaCredito()">
+      </div>
+      <div style="display:flex;gap:6px">
+        <input type="number" id="mcred-costo" class="pi" placeholder="Costo del producto/servicio (Lps)" min="0" step="0.01" style="margin:0;flex:1;background:var(--red-bg);color:var(--red);border-color:#3d0a0a" oninput="calcGananciaCredito()">
+        <input type="number" id="mcred-ganancia" class="pi" placeholder="Ganancia" readonly style="margin:0;flex:1;background:var(--grn-bg);color:var(--green);border-color:#0a3a1a;cursor:default">
       </div>
       <select id="mcred-metodo" class="pi" style="margin:0;font-size:.77rem">
         <option value="">💳 Método de pago...</option>
@@ -1745,6 +1749,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <h3 style="color:var(--amber);margin-bottom:12px">💰 Registrar Abono</h3>
     <input type="hidden" id="mab-credito-id">
     <div id="mab-info" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px;margin-bottom:9px;font-size:.75rem;color:var(--text2)"></div>
+    <div id="mab-historial" style="max-height:120px;overflow-y:auto;margin-bottom:9px"></div>
     <div style="display:flex;flex-direction:column;gap:7px">
       <div style="display:flex;gap:6px">
         <input type="date" id="mab-fecha" class="pi" style="margin:0;flex:1">
@@ -5037,6 +5042,8 @@ function abrirModalCredito(tipo) {
   document.getElementById('mcred-nombre').value   = '';
   document.getElementById('mcred-fecha').value    = hoyKey();
   document.getElementById('mcred-monto').value    = '';
+  document.getElementById('mcred-costo').value    = '';
+  document.getElementById('mcred-ganancia').value = '';
   document.getElementById('mcred-metodo').value   = '';
   document.getElementById('mcred-desc').value     = '';
   const esDado = tipo === 'dado';
@@ -5049,6 +5056,12 @@ function cerrarModalCredito() {
   document.getElementById('modal-credito').classList.remove('open');
 }
 
+function calcGananciaCredito() {
+  const monto = parseFloat(document.getElementById('mcred-monto').value) || 0;
+  const costo = parseFloat(document.getElementById('mcred-costo').value) || 0;
+  document.getElementById('mcred-ganancia').value = (monto - costo).toFixed(2);
+}
+
 function guardarCredito() {
   const nombre = document.getElementById('mcred-nombre').value.trim();
   const monto  = parseFloat(document.getElementById('mcred-monto').value) || 0;
@@ -5056,7 +5069,9 @@ function guardarCredito() {
 
   const fechaVal  = document.getElementById('mcred-fecha').value || hoyKey();
   const fechaDisp = new Date(fechaVal+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const tipo = document.getElementById('mcred-tipo-val').value || 'dado';
+  const tipo   = document.getElementById('mcred-tipo-val').value || 'dado';
+  const costo  = parseFloat(document.getElementById('mcred-costo').value) || 0;
+  const ganancia = monto - costo;
 
   let credito;
   if (creditoEditId) {
@@ -5066,7 +5081,7 @@ function guardarCredito() {
       ...creditos[idx],
       tipo, nombre,
       fecha: fechaDisp, fechaKey: fechaVal,
-      monto,
+      monto, costo, ganancia,
       metodo: document.getElementById('mcred-metodo').value     || '',
       desc:   document.getElementById('mcred-desc').value.trim() || ''
     };
@@ -5077,7 +5092,7 @@ function guardarCredito() {
       id: Date.now(),
       tipo, nombre,
       fecha: fechaDisp, fechaKey: fechaVal,
-      monto,
+      monto, costo, ganancia,
       abonos: [],
       abonado: 0,
       saldo: monto,
@@ -5105,6 +5120,8 @@ function editarCredito(id) {
   document.getElementById('mcred-nombre').value   = c.nombre;
   document.getElementById('mcred-fecha').value    = c.fechaKey || hoyKey();
   document.getElementById('mcred-monto').value    = c.monto;
+  document.getElementById('mcred-costo').value    = c.costo || '';
+  document.getElementById('mcred-ganancia').value = (c.ganancia || (c.monto - (c.costo||0))).toFixed(2);
   document.getElementById('mcred-metodo').value   = c.metodo || '';
   document.getElementById('mcred-desc').value     = c.desc   || '';
   const esDado = c.tipo === 'dado';
@@ -5145,10 +5162,42 @@ function abrirModalAbono(id) {
   document.getElementById('mab-metodo').value      = 'Efectivo';
   document.getElementById('mab-info').innerHTML = `
     <strong>${c.nombre}</strong> · ${c.tipo === 'dado' ? '📤 Crédito a cliente' : '📥 Crédito de proveedor'}<br>
-    Monto total: L ${fmt(c.monto)} · Abonado: L ${fmt(c.abonado)} ·
+    Monto total: L ${fmt(c.monto)}${c.costo ? ` · Costo: L ${fmt(c.costo)} · Ganancia: L ${fmt(c.ganancia!=null?c.ganancia:(c.monto-c.costo))}` : ''}<br>
+    Abonado: L ${fmt(c.abonado)} ·
     Saldo pendiente: <strong style="color:var(--amber)">L ${fmt(c.saldo)}</strong>`;
+  renderHistorialAbonos(c);
   document.getElementById('mab-preview').textContent = '';
   document.getElementById('modal-abono').classList.add('open');
+}
+
+function renderHistorialAbonos(c) {
+  const cont = document.getElementById('mab-historial');
+  if (!cont) return;
+  if (!c.abonos || !c.abonos.length) { cont.innerHTML = '<div style="font-size:.68rem;color:var(--dim);text-align:center;padding:6px">Sin abonos todavía</div>'; return; }
+  // Mostrar en orden cronológico: Abono 1 es el más antiguo
+  const enOrden = [...c.abonos].reverse();
+  cont.innerHTML = enOrden.map((a, i) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;background:var(--s3);border-radius:5px;padding:5px 9px;margin-bottom:4px;font-size:.7rem">
+      <span style="color:var(--text2)"><strong style="color:var(--amber)">Abono ${i+1}</strong> · ${a.fecha} · ${a.metodo||''}</span>
+      <span style="display:flex;align-items:center;gap:6px">
+        <span style="font-family:var(--mono);color:var(--green);font-weight:700">L ${fmt(a.monto)}</span>
+        <button onclick="eliminarAbono(${c.id},${c.abonos.length-1-i})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:4px;padding:1px 6px;font-size:.6rem;cursor:pointer;font-family:var(--font)">✕</button>
+      </span>
+    </div>`).join('');
+}
+
+function eliminarAbono(creditoId, abonoIdx) {
+  const c = creditos.find(x => x.id == creditoId);
+  if (!c || !c.abonos || !c.abonos[abonoIdx]) return;
+  if (!confirm(`¿Eliminar este abono de L ${fmt(c.abonos[abonoIdx].monto)}?`)) return;
+  c.abonos.splice(abonoIdx, 1);
+  recalcCredito(c);
+  if (c.saldo > 0 && c.estado === 'entregado') c.estado = c.abonado > 0 ? 'abonado' : 'pendiente';
+  saveAll();
+  renderCreditos();
+  renderHistorialAbonos(c);
+  enviarCreditoAGAS(c);
+  toast('Abono eliminado', 'err');
 }
 
 function cerrarModalAbono() {
@@ -5207,6 +5256,8 @@ async function enviarCreditoAGAS(credito, subaction) {
     params.append('nombre',         credito.nombre || '');
     params.append('fecha',          credito.fecha  || '');
     params.append('monto',          (credito.monto   || 0).toFixed(2));
+    params.append('costo',          (credito.costo   || 0).toFixed(2));
+    params.append('ganancia',       (credito.ganancia != null ? credito.ganancia : (credito.monto - (credito.costo||0))).toFixed(2));
     params.append('abonado',        (credito.abonado || 0).toFixed(2));
     params.append('saldo',          (credito.saldo   || 0).toFixed(2));
     params.append('estado',         credito.estado || 'pendiente');
@@ -5283,6 +5334,7 @@ function renderCreditos() {
             <span style="font-size:.6rem;background:${estadoBg[c.estado]||'var(--s3)'};color:${estadoColor[c.estado]||'var(--muted)'};padding:1px 8px;border-radius:10px;font-weight:700">${estadoLabel[c.estado]||c.estado}</span>
           </div>
           <div style="font-size:.68rem;color:var(--muted)">${c.fecha}${c.metodo?` · ${c.metodo}`:''}</div>
+          ${c.costo ? `<div style="font-size:.66rem;color:var(--muted);margin-top:2px">Costo: L ${fmt(c.costo)} · Ganancia: <strong style="color:var(--green)">L ${fmt(c.ganancia!=null?c.ganancia:(c.monto-c.costo))}</strong></div>` : ''}
           ${c.desc ? `<div style="font-size:.7rem;color:var(--dim);margin-top:3px;font-style:italic">${c.desc}</div>` : ''}
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -5290,6 +5342,17 @@ function renderCreditos() {
           <div style="font-size:.66rem;color:var(--muted)">Saldo: <strong style="color:${c.saldo>0?'var(--amber)':'var(--green)'}">L ${fmt(c.saldo)}</strong></div>
         </div>
       </div>
+      ${c.abonos && c.abonos.length ? `
+      <details style="margin-top:8px">
+        <summary style="cursor:pointer;font-size:.66rem;color:var(--blue);font-weight:700;list-style:none">▸ Ver ${c.abonos.length} abono${c.abonos.length>1?'s':''}</summary>
+        <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
+          ${[...c.abonos].reverse().map((a,i) => `
+          <div style="display:flex;justify-content:space-between;background:var(--s3);border-radius:5px;padding:4px 9px;font-size:.67rem">
+            <span style="color:var(--text2)"><strong style="color:var(--amber)">Abono ${i+1}</strong> · ${a.fecha}${a.metodo?` · ${a.metodo}`:''}</span>
+            <span style="font-family:var(--mono);color:var(--green);font-weight:700">L ${fmt(a.monto)}</span>
+          </div>`).join('')}
+        </div>
+      </details>` : ''}
       <div style="background:var(--s1);border-radius:6px;height:6px;margin-top:9px;overflow:hidden">
         <div style="background:var(--acc);height:100%;width:${pct}%"></div>
       </div>
