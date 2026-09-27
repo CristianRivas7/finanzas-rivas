@@ -2652,8 +2652,14 @@ async function flushGasQueue() {
   while (gasQueue.length > 0) {
     const item = gasQueue[0];
     try {
-      await fetch(GAS_URL, { method:'POST', mode:'no-cors', body: item.params });
-      gasQueue.shift(); // éxito — remover de la cola
+      if (item.esGet) {
+        const resp = await fetch(GAS_URL + '?' + item.params.toString(), { method: 'GET' });
+        const data = await resp.json();
+        if (!data.ok) console.error('GAS rechazó pendiente de la cola:', data.error);
+      } else {
+        await fetch(GAS_URL, { method:'POST', mode:'no-cors', body: item.params });
+      }
+      gasQueue.shift(); // éxito (o al menos respondió) — remover de la cola
     } catch(e) {
       break; // sin conexión — dejar en cola y reintentar luego
     }
@@ -5268,13 +5274,21 @@ async function enviarCreditoAGAS(credito, subaction) {
   try {
     statusEl.textContent = '⏳ Enviando...';
     statusEl.className   = 'gas-status';
-    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
-    statusEl.textContent = '✓ GAS: Enviado';
-    statusEl.className   = 'gas-status ok';
-    if (gasQueue.length > 0) flushGasQueue();
+    const resp = await fetch(GAS_URL + '?' + params.toString(), { method: 'GET' });
+    const data = await resp.json();
+    if (data.ok) {
+      statusEl.textContent = '✓ GAS: Enviado';
+      statusEl.className   = 'gas-status ok';
+      if (gasQueue.length > 0) flushGasQueue();
+    } else {
+      console.error('GAS rechazó el crédito:', data.error);
+      statusEl.textContent = '✗ GAS: Error';
+      statusEl.className   = 'gas-status err';
+      toast('Error al guardar en Sheets: ' + (data.error || 'desconocido'), 'err');
+    }
   } catch (e) {
     console.warn('GAS crédito falló (sin conexión):', e);
-    gasQueue.push({ params, credito });
+    gasQueue.push({ params, credito, esGet: true });
     statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
     statusEl.className   = 'gas-status err';
     toast('Sin internet — guardado local. Se enviará al reconectar ✓', 'warn');
