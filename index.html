@@ -2143,7 +2143,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbygKSTT3C5szDfDHffMJ4R5-m9yo4M6ibuZMjFukYFZ-OlPiyTPHIWIvHF17GMC6FLUfg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbzyCl0lr12tMh836VLJ2osFajqRFtYTmIU89iOLmMZn-uKo03_cnfensuZqbYa6FI7_uA/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -5108,6 +5108,7 @@ function guardarCredito() {
       desc:   document.getElementById('mcred-desc').value.trim() || ''
     };
     creditos.unshift(credito);
+    enviarMovimientoCreditoAGAS(credito, tipo === 'dado' ? 'Crédito Otorgado' : 'Crédito Recibido', monto, { fecha: fechaDisp });
   }
   enviarCreditoAGAS(credito);
 
@@ -5195,7 +5196,8 @@ function renderHistorialAbonos(c) {
 function eliminarAbono(creditoId, abonoIdx) {
   const c = creditos.find(x => x.id == creditoId);
   if (!c || !c.abonos || !c.abonos[abonoIdx]) return;
-  if (!confirm(`¿Eliminar este abono de L ${fmt(c.abonos[abonoIdx].monto)}?`)) return;
+  const abonoAEliminar = c.abonos[abonoIdx];
+  if (!confirm(`¿Eliminar este abono de L ${fmt(abonoAEliminar.monto)}?`)) return;
   c.abonos.splice(abonoIdx, 1);
   recalcCredito(c);
   if (c.saldo > 0 && c.estado === 'entregado') c.estado = c.abonado > 0 ? 'abonado' : 'pendiente';
@@ -5203,6 +5205,7 @@ function eliminarAbono(creditoId, abonoIdx) {
   renderCreditos();
   renderHistorialAbonos(c);
   enviarCreditoAGAS(c);
+  if (abonoAEliminar.id) enviarMovimientoCreditoAGAS(c, 'Abono', 0, { id: abonoAEliminar.id, subaction: 'eliminar' });
   toast('Abono eliminado', 'err');
 }
 
@@ -5231,13 +5234,19 @@ function guardarAbono() {
   const fechaDisp = new Date(fechaVal+'T12:00:00').toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'});
 
   c.abonos = c.abonos || [];
-  c.abonos.unshift({ fecha: fechaDisp, fechaKey: fechaVal, monto, metodo: document.getElementById('mab-metodo').value || 'Efectivo' });
+  const estadoAntes = c.estado;
+  const nuevoAbono = { id: Date.now(), fecha: fechaDisp, fechaKey: fechaVal, hora: horaHN(new Date()), monto, metodo: document.getElementById('mab-metodo').value || 'Efectivo' };
+  c.abonos.unshift(nuevoAbono);
   recalcCredito(c);
 
   saveAll();
   cerrarModalAbono();
   renderCreditos();
   enviarCreditoAGAS(c);
+  enviarMovimientoCreditoAGAS(c, 'Abono', monto, { id: nuevoAbono.id, fecha: fechaDisp, hora: nuevoAbono.hora, metodo: nuevoAbono.metodo });
+  if (estadoAntes !== 'cancelado' && c.estado === 'cancelado') {
+    enviarMovimientoCreditoAGAS(c, 'Cancelado', 0, { id: Date.now() + 1, fecha: fechaDisp, hora: nuevoAbono.hora });
+  }
   toast(c.saldo <= 0 ? '✅ Abono guardado — crédito cancelado' : `Abono de L ${fmt(monto)} guardado ✓`);
 }
 
@@ -5248,6 +5257,7 @@ function marcarCreditoEntregado(id) {
   c.estado = 'entregado';
   saveAll(); renderCreditos();
   enviarCreditoAGAS(c);
+  enviarMovimientoCreditoAGAS(c, 'Entregado', 0, {});
   toast('📦 Crédito marcado como entregado');
 }
 
@@ -5292,6 +5302,64 @@ async function enviarCreditoAGAS(credito, subaction) {
     statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
     statusEl.className   = 'gas-status err';
     toast('Sin internet — guardado local. Se enviará al reconectar ✓', 'warn');
+    setTimeout(flushGasQueue, 15000);
+  }
+}
+
+/* Registra un movimiento individual del crédito (Crédito otorgado/recibido,
+   Abono, Cancelado, Entregado) en su propia fila de la hoja MovimientosCreditos,
+   con fecha y hora exactas — para tener el desglose completo, no solo el total. */
+async function enviarMovimientoCreditoAGAS(credito, movimiento, monto, opts) {
+  opts = opts || {};
+  const statusEl = document.getElementById('gas-status');
+  const params = new URLSearchParams();
+  params.append('action',       'movCredito');
+  params.append('subaction',    opts.subaction || 'guardar');
+  params.append('id',           String(opts.id || Date.now()));
+  if ((opts.subaction || 'guardar') === 'eliminar') {
+    try {
+      statusEl.textContent = '⏳ Enviando...';
+      statusEl.className   = 'gas-status';
+      const resp = await fetch(GAS_URL + '?' + params.toString(), { method: 'GET' });
+      const data = await resp.json();
+      if (data.ok) { statusEl.textContent = '✓ GAS: Enviado'; statusEl.className = 'gas-status ok'; }
+      else { statusEl.textContent = '✗ GAS: Error'; statusEl.className = 'gas-status err'; }
+    } catch (e) {
+      gasQueue.push({ params, esGet: true });
+      setTimeout(flushGasQueue, 15000);
+    }
+    return;
+  }
+  params.append('creditoId',    String(credito.id));
+  params.append('nombre',       credito.nombre || '');
+  params.append('tipo',         credito.tipo === 'dado' ? 'Crédito a Cliente' : 'Crédito de Proveedor');
+  params.append('movimiento',   movimiento);
+  params.append('fecha',        opts.fecha || credito.fecha || '');
+  params.append('hora',         opts.hora  || horaHN(new Date()));
+  params.append('monto',        (monto || 0).toFixed(2));
+  params.append('saldoDespues', (credito.saldo || 0).toFixed(2));
+  params.append('metodo',       opts.metodo || credito.metodo || '');
+  params.append('desc',         opts.desc   || credito.desc   || '');
+  try {
+    statusEl.textContent = '⏳ Enviando...';
+    statusEl.className   = 'gas-status';
+    const resp = await fetch(GAS_URL + '?' + params.toString(), { method: 'GET' });
+    const data = await resp.json();
+    if (data.ok) {
+      statusEl.textContent = '✓ GAS: Enviado';
+      statusEl.className   = 'gas-status ok';
+      if (gasQueue.length > 0) flushGasQueue();
+    } else {
+      console.error('GAS rechazó el movimiento:', data.error);
+      statusEl.textContent = '✗ GAS: Error';
+      statusEl.className   = 'gas-status err';
+      toast('Error al guardar movimiento en Sheets: ' + (data.error || 'desconocido'), 'err');
+    }
+  } catch (e) {
+    console.warn('GAS movimiento falló (sin conexión):', e);
+    gasQueue.push({ params, esGet: true });
+    statusEl.textContent = `✗ GAS: Sin conexión (${gasQueue.length} pend.)`;
+    statusEl.className   = 'gas-status err';
     setTimeout(flushGasQueue, 15000);
   }
 }
