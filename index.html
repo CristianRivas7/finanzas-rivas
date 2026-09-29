@@ -1093,6 +1093,11 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
           <input type="hidden" id="reg-img-data">
         </div>
         <button class="btn-save" id="btn-save" onclick="guardar()">GUARDAR MOVIMIENTO</button>
+        <div id="ultimo-recibo-box" style="display:none;margin-top:8px">
+          <button onclick="docRegistro(ultimoRegistroId)" style="width:100%;background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:7px;padding:9px;font-size:.74rem;cursor:pointer;font-family:var(--font);font-weight:700">
+            🧾 Recibo / comprobante de: <span id="ultimo-recibo-desc"></span>
+          </button>
+        </div>
         <div class="mlog" id="mlog"></div>
       </div>
 
@@ -1573,6 +1578,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn-save" onclick="abrirModalCredito('dado')" style="padding:7px 14px;font-size:.73rem;background:var(--green)">📤 Crédito a Cliente</button>
         <button class="btn-save" onclick="abrirModalCredito('recibido')" style="padding:7px 14px;font-size:.73rem;background:var(--orange)">📥 Crédito de Proveedor</button>
+        <button class="btn-save" onclick="abrirModalEmpresa()" style="padding:7px 12px;font-size:.73rem;background:var(--s3);color:var(--text2);border:1px solid var(--bd2)">⚙️ Datos del negocio</button>
       </div>
     </div>
     <!-- Totales -->
@@ -1767,6 +1773,41 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <div class="modal-btns" style="margin-top:12px">
       <button class="mbtn-cancel" onclick="cerrarModalAbono()">Cancelar</button>
       <button class="mbtn-ok" onclick="guardarAbono()">💾 Guardar Abono</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DOCUMENTO PDF (recibo / comprobante) -->
+<div class="overlay" id="modal-doc" onclick="if(event.target===this)cerrarDoc()">
+  <div class="modal" style="max-width:420px;width:95%">
+    <h3 style="margin-bottom:10px">🧾 <span id="doc-titulo">Documento</span></h3>
+    <div id="doc-resumen" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:10px;font-size:.75rem;color:var(--text2);line-height:1.6;margin-bottom:9px"></div>
+    <input type="tel" id="doc-tel" class="pi" placeholder="WhatsApp del cliente (opcional, ej. 9999-9999)" style="margin:0 0 4px 0">
+    <div style="font-size:.6rem;color:var(--dim);margin-bottom:10px">En el celular se abre directo WhatsApp con el PDF adjunto. En computadora se descarga el PDF y se abre el chat.</div>
+    <div class="modal-btns" style="flex-wrap:wrap;gap:6px">
+      <button class="mbtn-cancel" onclick="cerrarDoc()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--blue)" onclick="descargarDoc()">📥 Descargar PDF</button>
+      <button class="mbtn-ok" style="background:#25d366;color:#04140a" onclick="compartirDocWA()">📲 WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DATOS DEL NEGOCIO (encabezado de los PDF) -->
+<div class="overlay" id="modal-empresa" onclick="if(event.target===this)cerrarModalEmpresa()">
+  <div class="modal" style="max-width:420px;width:95%">
+    <h3 style="margin-bottom:10px">⚙️ Datos del negocio (encabezado de los PDF)</h3>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="emp-nombre" class="pi" placeholder="Nombre del negocio" style="margin:0">
+      <div style="display:flex;gap:6px">
+        <input type="text" id="emp-rtn" class="pi" placeholder="RTN (opcional)" style="margin:0;flex:1">
+        <input type="text" id="emp-tel" class="pi" placeholder="Teléfono" style="margin:0;flex:1">
+      </div>
+      <input type="text" id="emp-dir" class="pi" placeholder="Dirección (opcional)" style="margin:0">
+      <input type="text" id="emp-pie" class="pi" placeholder="Mensaje al pie (ej. Gracias por su preferencia)" style="margin:0">
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalEmpresa()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarEmpresa()">💾 Guardar</button>
     </div>
   </div>
 </div>
@@ -2147,6 +2188,7 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbygKSTT3C5szDfDHffMJ4R5
 
 /* ═══ ESTADO ═══ */
 let registros = [];
+let ultimoRegistroId = null;
 let proyectos = [];
 let creditos = [];
 let creditoEditId = null;
@@ -2964,6 +3006,7 @@ function renderProyectos() {
           ${p.desc ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px;font-style:italic">${p.desc}</div>` : ''}
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0">
+          <button onclick="docProyecto('${p.id}')" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 PDF</button>
           <button onclick="editarProyecto('${p.id}')" style="background:var(--blue-bg);border:1px solid var(--bd2);
             color:var(--blue);border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️ Editar</button>
           <button onclick="eliminarProyecto('${p.id}')" style="background:var(--red-bg);border:1px solid #3d0a0a;
@@ -3337,6 +3380,9 @@ function guardar() {
     imagen: imgData
   };
   registros.unshift(reg);
+  ultimoRegistroId = reg.id;
+  document.getElementById('ultimo-recibo-desc').textContent = desc;
+  document.getElementById('ultimo-recibo-box').style.display = 'block';
 
   enviarAGoogleSheets(reg);
 
@@ -4059,6 +4105,7 @@ function renderHistorial() {
           <td style="font-family:var(--mono);font-weight:600;color:${r.tipo==='IN'?'var(--green)':'var(--red)'}">
             ${r.tipo==='IN'?'+':'−'}${fmt(r.neto)}</td>
           <td>
+            <button onclick="docRegistro('${r.id}')" title="Recibo PDF" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:3px 7px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾</button>
             <button onclick="editarRegistro('${r.id}')" style="background:var(--blue-bg);border:1px solid var(--bd2);
               color:var(--blue);border-radius:5px;padding:3px 7px;font-size:.65rem;cursor:pointer;
               font-family:var(--font);font-weight:700">✏️</button>
@@ -5431,7 +5478,8 @@ function renderCreditos() {
           ${[...c.abonos].reverse().map((a,i) => `
           <div style="display:flex;justify-content:space-between;background:var(--s3);border-radius:5px;padding:4px 9px;font-size:.67rem">
             <span style="color:var(--text2)"><strong style="color:var(--amber)">Abono ${i+1}</strong> · ${a.fecha}${a.metodo?` · ${a.metodo}`:''}</span>
-            <span style="font-family:var(--mono);color:var(--green);font-weight:700">L ${fmt(a.monto)}</span>
+            <span style="display:flex;align-items:center;gap:6px"><span style="font-family:var(--mono);color:var(--green);font-weight:700">L ${fmt(a.monto)}</span>
+              <button onclick="docAbono(${c.id},${i+1})" title="Recibo de este abono" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.6rem;cursor:pointer;font-family:var(--font)">🧾</button></span>
           </div>`).join('')}
         </div>
       </details>` : ''}
@@ -5443,12 +5491,322 @@ function renderCreditos() {
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${c.saldo > 0 ? `<button onclick="abrirModalAbono(${c.id})" style="background:var(--amb-bg);border:1px solid #3d2a00;color:var(--amber);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">💰 Abono</button>` : ''}
           ${c.saldo <= 0 && c.estado !== 'entregado' ? `<button onclick="marcarCreditoEntregado(${c.id})" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">📦 Entregado</button>` : ''}
+          <button onclick="docCredito(${c.id})" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 PDF</button>
           <button onclick="editarCredito(${c.id})" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️</button>
           <button onclick="eliminarCredito(${c.id})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════
+   MÓDULO DOCUMENTOS PDF — recibos, comprobantes y estados de cuenta
+   con opción de descargar o compartir por WhatsApp
+   ═══════════════════════════════════════════════════════ */
+let docPendiente = null;
+const EMPRESA_DEF = { nombre: 'MultiServicios Rivas Tech Solutions', rtn: '', tel: '', dir: '', pie: 'Gracias por su preferencia.' };
+
+function getEmpresa() {
+  try { return { ...EMPRESA_DEF, ...JSON.parse(localStorage.getItem('cr_empresa') || '{}') }; }
+  catch (e) { return { ...EMPRESA_DEF }; }
+}
+function abrirModalEmpresa() {
+  const E = getEmpresa();
+  document.getElementById('emp-nombre').value = E.nombre;
+  document.getElementById('emp-rtn').value    = E.rtn;
+  document.getElementById('emp-tel').value    = E.tel;
+  document.getElementById('emp-dir').value    = E.dir;
+  document.getElementById('emp-pie').value    = E.pie;
+  document.getElementById('modal-empresa').classList.add('open');
+}
+function cerrarModalEmpresa() { document.getElementById('modal-empresa').classList.remove('open'); }
+function guardarEmpresa() {
+  const E = {
+    nombre: document.getElementById('emp-nombre').value.trim() || EMPRESA_DEF.nombre,
+    rtn:    document.getElementById('emp-rtn').value.trim(),
+    tel:    document.getElementById('emp-tel').value.trim(),
+    dir:    document.getElementById('emp-dir').value.trim(),
+    pie:    document.getElementById('emp-pie').value.trim()
+  };
+  localStorage.setItem('cr_empresa', JSON.stringify(E));
+  cerrarModalEmpresa();
+  toast('Datos del negocio guardados ✓');
+}
+
+/* Teléfonos recordados por nombre de cliente */
+function getTelefono(nombre) {
+  try { return (JSON.parse(localStorage.getItem('cr_telefonos') || '{}'))[(nombre || '').toLowerCase()] || ''; } catch (e) { return ''; }
+}
+function setTelefono(nombre, tel) {
+  if (!nombre || !tel) return;
+  try {
+    const m = JSON.parse(localStorage.getItem('cr_telefonos') || '{}');
+    m[nombre.toLowerCase()] = tel;
+    localStorage.setItem('cr_telefonos', JSON.stringify(m));
+  } catch (e) {}
+}
+
+/* Carga jsPDF solo cuando se necesita (no afecta la velocidad de la página) */
+function cargarJsPDF() {
+  return new Promise((res, rej) => {
+    if (window.jspdf) return res(window.jspdf.jsPDF);
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    s.onload  = () => res(window.jspdf.jsPDF);
+    s.onerror = () => rej(new Error('No se pudo cargar la librería de PDF. Revise su conexión a internet.'));
+    document.head.appendChild(s);
+  });
+}
+
+/* ── Piezas de dibujo del PDF ── */
+function pdfEncabezado(doc, titulo, numero, fechaTxt) {
+  const E = getEmpresa();
+  doc.setFillColor(11, 15, 20); doc.rect(0, 0, 210, 34, 'F');
+  let xTxt = 15;
+  try {
+    const img = document.querySelector('.logo img');
+    if (img && img.src.startsWith('data:image')) {
+      const h = 24, w = Math.min(40, h * ((img.naturalWidth || 1) / (img.naturalHeight || 1)));
+      doc.addImage(img.src, 'JPEG', 12, 5, w, h);
+      xTxt = 12 + w + 5;
+    }
+  } catch (e) {}
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+  doc.text(E.nombre, xTxt, 14);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  const l2 = [E.rtn ? 'RTN: ' + E.rtn : '', E.tel ? 'Tel: ' + E.tel : ''].filter(Boolean).join('    ');
+  if (l2) doc.text(l2, xTxt, 20);
+  if (E.dir) doc.text(E.dir, xTxt, 25);
+  doc.setTextColor(20, 20, 20); doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+  doc.text(titulo, 15, 46);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10);
+  doc.text('No. ' + numero, 195, 43, { align: 'right' });
+  doc.text('Fecha: ' + fechaTxt, 195, 49, { align: 'right' });
+  doc.setDrawColor(0, 180, 130); doc.setLineWidth(0.6); doc.line(15, 53, 195, 53);
+  return 62;
+}
+function pdfCampo(doc, y, etiqueta, valor) {
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(90, 100, 110);
+  doc.text(etiqueta, 15, y);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(20, 20, 20);
+  const lineas = doc.splitTextToSize(String(valor || '-'), 135);
+  doc.text(lineas, 60, y);
+  return y + Math.max(6.5, lineas.length * 5 + 1.5);
+}
+function pdfTabla(doc, y, cols, filas) {
+  const x0 = 15, rowH = 7;
+  const cab = () => {
+    doc.setFillColor(30, 45, 61); doc.rect(x0, y - 5, 180, rowH, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    let x = x0;
+    cols.forEach(c => { doc.text(c.t, c.a === 'right' ? x + c.w - 2 : x + 2, y, { align: c.a === 'right' ? 'right' : 'left' }); x += c.w; });
+    y += rowH; doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal');
+  };
+  cab();
+  filas.forEach((f, i) => {
+    if (y > 268) { doc.addPage(); y = 20; cab(); }
+    if (i % 2 === 0) { doc.setFillColor(240, 244, 247); doc.rect(x0, y - 5, 180, rowH, 'F'); }
+    doc.setTextColor(30, 30, 30); doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    let x = x0;
+    f.forEach((cel, j) => { const c = cols[j]; doc.text(String(cel), c.a === 'right' ? x + c.w - 2 : x + 2, y, { align: c.a === 'right' ? 'right' : 'left', maxWidth: c.w - 3 }); x += c.w; });
+    y += rowH;
+  });
+  return y + 3;
+}
+function pdfTotales(doc, y, lineas) {
+  lineas.forEach(l => {
+    if (y > 275) { doc.addPage(); y = 20; }
+    if (l.destacar) { doc.setFillColor(225, 247, 239); doc.rect(105, y - 5.5, 90, 8, 'F'); }
+    doc.setFont('helvetica', l.destacar ? 'bold' : 'normal'); doc.setFontSize(l.destacar ? 11 : 10); doc.setTextColor(20, 20, 20);
+    doc.text(l.t, 108, y); doc.text(l.v, 193, y, { align: 'right' });
+    y += l.destacar ? 9 : 7;
+  });
+  return y;
+}
+function pdfPie(doc) {
+  const E = getEmpresa();
+  const n = doc.getNumberOfPages();
+  for (let p = 1; p <= n; p++) {
+    doc.setPage(p);
+    doc.setDrawColor(200, 205, 210); doc.setLineWidth(0.3); doc.line(15, 282, 195, 282);
+    doc.setFont('helvetica', 'italic'); doc.setFontSize(8.5); doc.setTextColor(110, 115, 120);
+    doc.text(E.pie || '', 105, 288, { align: 'center' });
+    doc.text('Pagina ' + p + ' de ' + n, 195, 292, { align: 'right' });
+  }
+}
+function pdfFirmas(doc, y, izq, der) {
+  if (y > 250) { doc.addPage(); y = 30; }
+  y += 18; doc.setDrawColor(90, 100, 110); doc.setLineWidth(0.3);
+  doc.line(25, y, 85, y); doc.line(125, y, 185, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 100, 110);
+  doc.text(izq, 55, y + 5, { align: 'center' }); doc.text(der, 155, y + 5, { align: 'center' });
+  return y + 10;
+}
+const L = n => 'L ' + fmt(n || 0);
+const numDoc = (pref, id) => pref + '-' + String(id).replace(/\D/g, '').slice(-6).padStart(6, '0');
+
+/* ── Constructores de documentos ── */
+function docCredito(id) {
+  const c = creditos.find(x => x.id == id); if (!c) return;
+  const E = getEmpresa();
+  const esDado = c.tipo === 'dado';
+  const cron = [...(c.abonos || [])].reverse();
+  let saldo = c.monto;
+  const filas = cron.map((a, i) => { saldo = Math.max(0, saldo - a.monto); return [i + 1, a.fecha, a.hora || '-', a.metodo || '-', L(a.monto), L(saldo)]; });
+  abrirDoc({
+    titulo: esDado ? 'Comprobante de crédito' : 'Estado de cuenta (proveedor)',
+    nombre: c.nombre,
+    archivo: (esDado ? 'Credito_' : 'EstadoCuenta_') + c.nombre.replace(/[^\w]+/g, '_') + '_' + numDoc('', c.id) + '.pdf',
+    resumen: `<strong>${c.nombre}</strong><br>Monto: ${L(c.monto)} · Abonado: ${L(c.abonado)}<br>Saldo pendiente: <strong>${L(c.saldo)}</strong>`,
+    texto: `Hola ${c.nombre}, le comparto su ${esDado ? 'comprobante de crédito' : 'estado de cuenta'} de ${E.nombre}.\nMonto: ${L(c.monto)}\nAbonado: ${L(c.abonado)}\nSaldo pendiente: ${L(c.saldo)}`,
+    render: doc => {
+      let y = pdfEncabezado(doc, esDado ? 'COMPROBANTE DE CRÉDITO' : 'ESTADO DE CUENTA - PROVEEDOR', numDoc('CRE', c.id), c.fecha);
+      y = pdfCampo(doc, y, esDado ? 'Cliente:' : 'Proveedor:', c.nombre);
+      y = pdfCampo(doc, y, 'Fecha del crédito:', c.fecha);
+      if (c.metodo) y = pdfCampo(doc, y, 'Método:', c.metodo);
+      if (c.desc)   y = pdfCampo(doc, y, 'Concepto:', c.desc);
+      y = pdfCampo(doc, y, 'Estado:', (c.estado || '').toUpperCase());
+      y += 4;
+      if (filas.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20); doc.text('Detalle de abonos', 15, y); y += 7;
+        y = pdfTabla(doc, y, [{ t: 'No.', w: 14 }, { t: 'Fecha', w: 30 }, { t: 'Hora', w: 26 }, { t: 'Método', w: 40 }, { t: 'Abono', w: 35, a: 'right' }, { t: 'Saldo', w: 35, a: 'right' }], filas);
+      } else {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(110, 115, 120); doc.text('Sin abonos registrados todavía.', 15, y); y += 10;
+      }
+      y = pdfTotales(doc, y + 2, [{ t: 'Monto total:', v: L(c.monto) }, { t: 'Total abonado:', v: L(c.abonado) }, { t: 'SALDO PENDIENTE:', v: L(c.saldo), destacar: true }]);
+      pdfFirmas(doc, y, 'Entregado por', 'Recibido por');
+    }
+  });
+}
+
+function docAbono(creditoId, n) {            // n = número cronológico del abono (1, 2, 3...)
+  const c = creditos.find(x => x.id == creditoId); if (!c) return;
+  const E = getEmpresa();
+  const cron = [...(c.abonos || [])].reverse();
+  const a = cron[n - 1]; if (!a) return;
+  let antes = c.monto;
+  for (let i = 0; i < n - 1; i++) antes = Math.max(0, antes - cron[i].monto);
+  const despues = Math.max(0, antes - a.monto);
+  abrirDoc({
+    titulo: 'Recibo de abono No. ' + n,
+    nombre: c.nombre,
+    archivo: 'Recibo_Abono' + n + '_' + c.nombre.replace(/[^\w]+/g, '_') + '.pdf',
+    resumen: `<strong>${c.nombre}</strong> · Abono ${n}<br>Monto: <strong>${L(a.monto)}</strong> · ${a.fecha}<br>Saldo después: ${L(despues)}`,
+    texto: `Hola ${c.nombre}, le comparto el recibo de su abono No. ${n} por ${L(a.monto)} (${a.fecha}) en ${E.nombre}.\nSaldo pendiente: ${L(despues)}`,
+    render: doc => {
+      let y = pdfEncabezado(doc, 'RECIBO DE ABONO', numDoc('ABO', a.id || (c.id + n)), a.fecha);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+      const txt = doc.splitTextToSize(`Recibimos de ${c.nombre} la cantidad de ${L(a.monto)} como abono No. ${n}${c.desc ? ' por concepto de: ' + c.desc : ' a su crédito'}.`, 180);
+      doc.text(txt, 15, y); y += txt.length * 6 + 6;
+      y = pdfCampo(doc, y, 'Fecha:', a.fecha + (a.hora ? '  ' + a.hora : ''));
+      y = pdfCampo(doc, y, 'Método de pago:', a.metodo || '-');
+      y = pdfCampo(doc, y, 'Crédito original:', L(c.monto));
+      y += 6;
+      y = pdfTotales(doc, y, [{ t: 'Saldo anterior:', v: L(antes) }, { t: 'Este abono:', v: L(a.monto) }, { t: 'SALDO ACTUAL:', v: L(despues), destacar: true }]);
+      pdfFirmas(doc, y, 'Recibido por', 'Cliente');
+    }
+  });
+}
+
+function docRegistro(id) {
+  const r = registros.find(x => x.id == id); if (!r) return;
+  const E = getEmpresa();
+  const esIn = r.tipo === 'IN';
+  const monto = esIn ? (r.bruto || r.neto || 0) : (r.neto || 0);
+  abrirDoc({
+    titulo: esIn ? 'Recibo de ingreso' : 'Comprobante de egreso',
+    nombre: r.cliente || '',
+    archivo: (esIn ? 'Recibo_' : 'Egreso_') + (r.fecha || '').replace(/\//g, '-') + '_' + numDoc('', r.id) + '.pdf',
+    resumen: `<strong>${r.desc || '(sin descripción)'}</strong><br>${r.cliente ? r.cliente + ' · ' : ''}${r.fecha} ${r.hora || ''}<br>Monto: <strong>${L(monto)}</strong>`,
+    texto: `Hola${r.cliente ? ' ' + r.cliente : ''}, le comparto su ${esIn ? 'recibo' : 'comprobante'} de ${E.nombre}.\n${r.desc || ''}\nMonto: ${L(monto)} - Fecha: ${r.fecha}`,
+    render: doc => {
+      let y = pdfEncabezado(doc, esIn ? 'RECIBO DE INGRESO' : 'COMPROBANTE DE EGRESO', numDoc(esIn ? 'REC' : 'EGR', r.id), r.fecha);
+      if (r.cliente) y = pdfCampo(doc, y, r.tipoContacto === 'proveedor' ? 'Proveedor:' : (esIn ? 'Recibido de:' : 'Pagado a:'), r.cliente);
+      y = pdfCampo(doc, y, 'Concepto:', r.desc);
+      y = pdfCampo(doc, y, 'Fecha y hora:', (r.fecha || '') + '  ' + (r.hora || ''));
+      if (r.categoria)  y = pdfCampo(doc, y, 'Categoría:', r.categoria);
+      if (r.metodoPago) y = pdfCampo(doc, y, 'Método de pago:', r.metodoPago);
+      if (r.pagado)     y = pdfCampo(doc, y, 'Estado de pago:', r.pagado);
+      if (r.observaciones) y = pdfCampo(doc, y, 'Observaciones:', r.observaciones);
+      y += 6;
+      y = pdfTotales(doc, y, [{ t: 'TOTAL:', v: L(monto), destacar: true }]);
+      pdfFirmas(doc, y, esIn ? 'Recibido por' : 'Entregado por', esIn ? 'Cliente' : 'Recibido por');
+    }
+  });
+}
+
+function docProyecto(id) {
+  const p = proyectos.find(x => x.id == id); if (!p) return;
+  const E = getEmpresa();
+  const regs = registros.filter(r => r.tipo === 'IN' && ((r.proyectoId || '').toLowerCase() === String(p.id).toLowerCase() || (r.proyectoId || '').toLowerCase() === (p.nombre || '').toLowerCase()));
+  const pMonto = p.monto || 0, pAbono = p.abono || 0, pSaldo = Math.max(0, pMonto - pAbono);
+  abrirDoc({
+    titulo: 'Estado de cuenta del proyecto',
+    nombre: p.cliente || '',
+    archivo: 'Proyecto_' + (p.nombre || 'proyecto').replace(/[^\w]+/g, '_') + '.pdf',
+    resumen: `<strong>${p.nombre}</strong>${p.cliente ? ' · ' + p.cliente : ''}<br>Monto: ${L(pMonto)} · Abonos: ${L(pAbono)}<br>Saldo por cobrar: <strong>${L(pSaldo)}</strong>`,
+    texto: `Hola${p.cliente ? ' ' + p.cliente : ''}, le comparto el estado de cuenta del proyecto "${p.nombre}" de ${E.nombre}.\nMonto: ${L(pMonto)}\nAbonos: ${L(pAbono)}\nSaldo por cobrar: ${L(pSaldo)}`,
+    render: doc => {
+      let y = pdfEncabezado(doc, 'ESTADO DE CUENTA - PROYECTO', numDoc('PRO', p.id), fechaHN(new Date()));
+      y = pdfCampo(doc, y, 'Proyecto:', p.nombre);
+      if (p.cliente)     y = pdfCampo(doc, y, 'Cliente:', p.cliente);
+      if (p.fechaInicio) y = pdfCampo(doc, y, 'Inicio:', p.fechaInicio);
+      if (p.fechaFin)    y = pdfCampo(doc, y, 'Fin estimado:', p.fechaFin);
+      if (p.estado)      y = pdfCampo(doc, y, 'Estado:', String(p.estado).toUpperCase());
+      if (p.desc)        y = pdfCampo(doc, y, 'Descripción:', p.desc);
+      y += 4;
+      if (regs.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20); doc.text('Pagos registrados', 15, y); y += 7;
+        y = pdfTabla(doc, y, [{ t: 'Fecha', w: 32 }, { t: 'Descripción', w: 108 }, { t: 'Monto', w: 40, a: 'right' }], regs.map(r => [r.fecha, r.desc || '', L(r.bruto || r.neto)]));
+      }
+      y = pdfTotales(doc, y + 2, [{ t: 'Monto del proyecto:', v: L(pMonto) }, { t: 'Total abonado:', v: L(pAbono) }, { t: 'SALDO POR COBRAR:', v: L(pSaldo), destacar: true }]);
+      pdfFirmas(doc, y, 'Entregado por', 'Cliente');
+    }
+  });
+}
+
+/* ── Ventana de acciones: descargar o compartir ── */
+function abrirDoc(d) {
+  docPendiente = d;
+  document.getElementById('doc-titulo').textContent = d.titulo;
+  document.getElementById('doc-resumen').innerHTML  = d.resumen;
+  document.getElementById('doc-tel').value = getTelefono(d.nombre);
+  document.getElementById('modal-doc').classList.add('open');
+  cargarJsPDF().catch(() => {});             // precarga para que compartir sea inmediato
+}
+function cerrarDoc() { document.getElementById('modal-doc').classList.remove('open'); }
+
+async function construirPDF() {
+  const JsPDF = await cargarJsPDF();
+  const doc = new JsPDF({ unit: 'mm', format: 'a4' });
+  docPendiente.render(doc);
+  pdfPie(doc);
+  return doc;
+}
+async function descargarDoc() {
+  if (!docPendiente) return;
+  try { const doc = await construirPDF(); doc.save(docPendiente.archivo); toast('PDF descargado ✓'); }
+  catch (e) { console.error(e); toast(e.message || 'No se pudo crear el PDF', 'err'); }
+}
+async function compartirDocWA() {
+  if (!docPendiente) return;
+  const telRaw = document.getElementById('doc-tel').value.trim();
+  setTelefono(docPendiente.nombre, telRaw);
+  try {
+    const doc  = await construirPDF();
+    const file = new File([doc.output('blob')], docPendiente.archivo, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: docPendiente.titulo, text: docPendiente.texto }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    // Computadora u otro navegador: se descarga el PDF y se abre el chat de WhatsApp con el mensaje
+    doc.save(docPendiente.archivo);
+    let tel = telRaw.replace(/\D/g, '');
+    if (tel.length === 8) tel = '504' + tel;
+    window.open('https://wa.me/' + tel + '?text=' + encodeURIComponent(docPendiente.texto + '\n\n(Adjunto el PDF)'), '_blank');
+    toast('PDF descargado — adjúntelo en el chat de WhatsApp', 'warn');
+  } catch (e) { console.error(e); toast(e.message || 'No se pudo compartir', 'err'); }
 }
 
 /* ═══════════════════════════════════════════════════════
