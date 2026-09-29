@@ -910,7 +910,10 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
       <!-- Caja de Registro -->
       <div class="psec psec-top" style="border-top-color:var(--acc)">
-        <div class="psec-title">Caja de Registro</div>
+        <div class="psec-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>Caja de Registro</span>
+          <button onclick="abrirModalEmpresa()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:6px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700;white-space:nowrap">⚙️ Datos del negocio</button>
+        </div>
         <div class="type-sel">
           <button class="tbtn in" id="btn-in"  onclick="setType('IN')">▲ Ingreso</button>
           <button class="tbtn"    id="btn-out" onclick="setType('OUT')">▼ Egreso</button>
