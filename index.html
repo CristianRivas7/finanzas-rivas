@@ -832,6 +832,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <button class="tab-btn" onclick="tab('v-creditos',this)">💳 Créditos</button>
     <button class="tab-btn" onclick="tab('v-gastos-per',this)">🏠 Personal</button>
     <button class="tab-btn" onclick="tab('v-agenda',this)">📝 Agenda</button>
+    <button class="tab-btn" onclick="tab('v-reportes',this);renderReportes()">📊 Reportes</button>
   </div>
 </nav>
 
@@ -1664,6 +1665,107 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- ══════════════════════════════════════════
+     VISTA: REPORTES
+══════════════════════════════════════════ -->
+<div id="v-reportes" class="view">
+  <div style="padding:12px;max-width:960px;margin:0 auto">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:800;color:var(--text)">📊 Reportes</div>
+      <button onclick="exportarReporteCSV()" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);padding:6px 14px;border-radius:7px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ Exportar CSV</button>
+    </div>
+
+    <!-- FILTROS -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:12px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Desde</span>
+        <input type="date" id="rep-desde" class="pi" style="margin:0;width:140px" onchange="renderReportes()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Hasta</span>
+        <input type="date" id="rep-hasta" class="pi" style="margin:0;width:140px" onchange="renderReportes()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Tipo</span>
+        <select id="rep-tipo" class="pi" style="margin:0;width:130px" onchange="renderReportes()">
+          <option value="">Todos</option>
+          <option value="IN">▲ Ingresos</option>
+          <option value="OUT">▼ Egresos</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Categoría</span>
+        <select id="rep-cat" class="pi" style="margin:0;width:150px" onchange="renderReportes()">
+          <option value="">Todas</option>
+          <option value="Reparación">Reparación</option>
+          <option value="Venta">Venta</option>
+          <option value="Servicio">Servicio</option>
+          <option value="Combustible">Combustible</option>
+          <option value="Herramientas">Herramientas</option>
+          <option value="Repuestos">Repuestos</option>
+          <option value="Alimentación">Alimentación</option>
+          <option value="Nómina">Nómina</option>
+          <option value="Insumos">Insumos</option>
+          <option value="Transferencia">Transferencia</option>
+          <option value="Otros">Otros</option>
+        </select>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <span style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase">Proyecto</span>
+        <select id="rep-proy" class="pi" style="margin:0;width:150px" onchange="renderReportes()">
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <button onclick="limpiarFiltrosRep()" style="background:var(--s3);border:1px solid var(--bd2);color:var(--muted);padding:6px 12px;border-radius:7px;font-size:.68rem;font-weight:700;cursor:pointer;font-family:var(--font);align-self:flex-end">✕ Limpiar</button>
+    </div>
+
+    <!-- TARJETAS RESUMEN -->
+    <div id="rep-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px"></div>
+
+    <!-- GRÁFICA DE BARRAS MENSUAL -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--text);margin-bottom:12px">📈 Ingresos vs Egresos por Mes</div>
+      <div id="rep-chart-barras" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- GRÁFICA POR CATEGORÍA -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--text);margin-bottom:12px">🍩 Distribución por Categoría</div>
+      <div id="rep-chart-cat" style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start"></div>
+    </div>
+
+    <!-- REPORTE POR PROYECTO -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--text);margin-bottom:10px">📋 Rentabilidad por Proyecto</div>
+      <div id="rep-proyectos"></div>
+    </div>
+
+    <!-- TOP CLIENTES -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px;margin-bottom:14px">
+      <div style="font-size:.72rem;font-weight:800;color:var(--text);margin-bottom:10px">👤 Top Clientes</div>
+      <div id="rep-clientes"></div>
+    </div>
+
+    <!-- TABLA DETALLE -->
+    <div style="background:var(--s2);border:1px solid var(--bd);border-radius:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:.72rem;font-weight:800;color:var(--text)">📄 Detalle de Registros</div>
+        <div id="rep-count" style="font-size:.65rem;color:var(--muted)"></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="htable" id="rep-tabla" style="width:100%">
+          <thead><tr>
+            <th>Fecha</th><th>Descripción</th><th>Categoría</th><th>Proyecto</th><th>Tipo</th><th>Monto</th><th>Ganancia</th>
+          </tr></thead>
+          <tbody id="rep-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
 <!-- MODAL NUEVO/EDITAR PROYECTO -->
 <div class="overlay" id="modal-proyecto" onclick="if(event.target===this)cerrarProyecto()">
   <div class="modal" style="max-width:440px;width:95%">
@@ -1786,6 +1888,15 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="modal" style="max-width:420px;width:95%">
     <h3 style="margin-bottom:10px">🧾 <span id="doc-titulo">Documento</span></h3>
     <div id="doc-resumen" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:10px;font-size:.75rem;color:var(--text2);line-height:1.6;margin-bottom:9px"></div>
+    <!-- Datos del cliente para la factura/recibo -->
+    <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:7px">📋 Datos del cliente (para el documento)</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="doc-cliente-nombre" class="pi" placeholder="Nombre del cliente" style="margin:0">
+        <input type="text" id="doc-cliente-rtn"    class="pi" placeholder="RTN del cliente (opcional)" style="margin:0">
+        <input type="text" id="doc-cliente-dir"    class="pi" placeholder="Dirección del cliente (opcional)" style="margin:0">
+      </div>
+    </div>
     <input type="tel" id="doc-tel" class="pi" placeholder="WhatsApp del cliente (opcional, ej. 9999-9999)" style="margin:0 0 4px 0">
     <div style="font-size:.6rem;color:var(--dim);margin-bottom:10px">En el celular se abre directo WhatsApp con el PDF adjunto. En computadora se descarga el PDF y se abre el chat.</div>
     <div class="modal-btns" style="flex-wrap:wrap;gap:6px">
@@ -5588,7 +5699,20 @@ function pdfEncabezado(doc, titulo, numero, fechaTxt) {
   doc.text('No. ' + numero, 195, 43, { align: 'right' });
   doc.text('Fecha: ' + fechaTxt, 195, 49, { align: 'right' });
   doc.setDrawColor(0, 180, 130); doc.setLineWidth(0.6); doc.line(15, 53, 195, 53);
-  return 62;
+  // Bloque de datos del cliente (si existen)
+  let yBase = 62;
+  const cli = docPendiente && docPendiente._clienteDoc;
+  if (cli && cli.nombre) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(60, 80, 100);
+    doc.text('DATOS DEL CLIENTE:', 15, yBase); yBase += 6;
+    doc.setFont('helvetica', 'normal'); doc.setTextColor(20, 20, 20);
+    doc.text(cli.nombre, 15, yBase); yBase += 5;
+    if (cli.rtn) { doc.text('RTN: ' + cli.rtn, 15, yBase); yBase += 5; }
+    if (cli.dir) { doc.text(cli.dir, 15, yBase); yBase += 5; }
+    doc.setDrawColor(200, 210, 220); doc.setLineWidth(0.3); doc.line(15, yBase, 195, yBase);
+    yBase += 5;
+  }
+  return yBase;
 }
 function pdfCampo(doc, y, etiqueta, valor) {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(90, 100, 110);
@@ -5773,29 +5897,63 @@ function docProyecto(id) {
 /* ── Ventana de acciones: descargar o compartir ── */
 function abrirDoc(d) {
   docPendiente = d;
-  document.getElementById('doc-titulo').textContent = d.titulo;
-  document.getElementById('doc-resumen').innerHTML  = d.resumen;
-  document.getElementById('doc-tel').value = getTelefono(d.nombre);
+  document.getElementById('doc-titulo').textContent        = d.titulo;
+  document.getElementById('doc-resumen').innerHTML         = d.resumen;
+  document.getElementById('doc-tel').value                 = getTelefono(d.nombre);
+  document.getElementById('doc-cliente-nombre').value      = d.nombre || '';
+  document.getElementById('doc-cliente-rtn').value         = getClienteRTN(d.nombre);
+  document.getElementById('doc-cliente-dir').value         = getClienteDir(d.nombre);
   document.getElementById('modal-doc').classList.add('open');
-  cargarJsPDF().catch(() => {});             // precarga para que compartir sea inmediato
+  cargarJsPDF().catch(() => {});
+}
+
+/* Recordar RTN y dirección del cliente por nombre */
+function getClienteRTN(nombre) {
+  try { return (JSON.parse(localStorage.getItem('cr_clientes_rtn') || '{}'))[(nombre||'').toLowerCase()] || ''; } catch(e) { return ''; }
+}
+function setClienteRTN(nombre, rtn) {
+  if (!nombre) return;
+  try { const m = JSON.parse(localStorage.getItem('cr_clientes_rtn')||'{}'); m[nombre.toLowerCase()] = rtn; localStorage.setItem('cr_clientes_rtn', JSON.stringify(m)); } catch(e) {}
+}
+function getClienteDir(nombre) {
+  try { return (JSON.parse(localStorage.getItem('cr_clientes_dir') || '{}'))[(nombre||'').toLowerCase()] || ''; } catch(e) { return ''; }
+}
+function setClienteDir(nombre, dir) {
+  if (!nombre) return;
+  try { const m = JSON.parse(localStorage.getItem('cr_clientes_dir')||'{}'); m[nombre.toLowerCase()] = dir; localStorage.setItem('cr_clientes_dir', JSON.stringify(m)); } catch(e) {}
 }
 function cerrarDoc() { document.getElementById('modal-doc').classList.remove('open'); }
 
+function getDocClienteActual() {
+  return {
+    nombre: document.getElementById('doc-cliente-nombre').value.trim(),
+    rtn:    document.getElementById('doc-cliente-rtn').value.trim(),
+    dir:    document.getElementById('doc-cliente-dir').value.trim()
+  };
+}
+
 async function construirPDF() {
   const JsPDF = await cargarJsPDF();
-  const doc = new JsPDF({ unit: 'mm', format: 'a4' });
+  const doc   = new JsPDF({ unit: 'mm', format: 'a4' });
+  // Pasar datos del cliente al render
+  docPendiente._clienteDoc = getDocClienteActual();
   docPendiente.render(doc);
   pdfPie(doc);
   return doc;
 }
 async function descargarDoc() {
   if (!docPendiente) return;
+  // Guardar datos del cliente para la próxima vez
+  const c = getDocClienteActual();
+  if (c.nombre) { setTelefono(c.nombre, document.getElementById('doc-tel').value.trim()); setClienteRTN(c.nombre, c.rtn); setClienteDir(c.nombre, c.dir); }
   try { const doc = await construirPDF(); doc.save(docPendiente.archivo); toast('PDF descargado ✓'); }
   catch (e) { console.error(e); toast(e.message || 'No se pudo crear el PDF', 'err'); }
 }
 async function compartirDocWA() {
   if (!docPendiente) return;
   const telRaw = document.getElementById('doc-tel').value.trim();
+  const c = getDocClienteActual();
+  if (c.nombre) { setClienteRTN(c.nombre, c.rtn); setClienteDir(c.nombre, c.dir); }
   setTelefono(docPendiente.nombre, telRaw);
   try {
     const doc  = await construirPDF();
@@ -5960,6 +6118,250 @@ function renderAgenda() {
   }).join('');
 }
 
+
+/* ═══════════════════════════════════════════
+   MÓDULO DE REPORTES
+═══════════════════════════════════════════ */
+
+function filtrarRegistrosRep() {
+  const desde = document.getElementById('rep-desde').value;
+  const hasta = document.getElementById('rep-hasta').value;
+  const tipo  = document.getElementById('rep-tipo').value;
+  const cat   = document.getElementById('rep-cat').value;
+  const proy  = document.getElementById('rep-proy').value;
+
+  return registros.filter(r => {
+    if (desde && r.fechaKey < desde) return false;
+    if (hasta && r.fechaKey > hasta) return false;
+    if (tipo  && r.tipo !== tipo)    return false;
+    if (cat   && r.categoria !== cat) return false;
+    if (proy  && r.proyectoId !== proy) return false;
+    return true;
+  });
+}
+
+function renderReportes() {
+  // Poblar select de proyectos
+  const selProy = document.getElementById('rep-proy');
+  const proyActual = selProy.value;
+  selProy.innerHTML = '<option value="">Todos</option>';
+  const ids = [...new Set(registros.map(r => r.proyectoId).filter(Boolean))];
+  ids.forEach(id => {
+    const p = proyectos.find(p => p.id == id);
+    selProy.innerHTML += `<option value="${id}">${p ? p.nombre : id}</option>`;
+  });
+  selProy.value = proyActual;
+
+  const regs = filtrarRegistrosRep();
+
+  // ── TARJETAS RESUMEN ──
+  const totalIn  = regs.filter(r=>r.tipo==='IN').reduce((s,r)=>s+(r.neto||0),0);
+  const totalOut = regs.filter(r=>r.tipo==='OUT').reduce((s,r)=>s+(r.neto||0),0);
+  const ganancia = regs.reduce((s,r)=>s+(r.ganancia||0),0);
+  const diezmos  = regs.reduce((s,r)=>s+(r.diezmo||0)+(r.ofrenda||0),0);
+  const balance  = totalIn - totalOut;
+
+  document.getElementById('rep-cards').innerHTML = `
+    <div style="background:var(--grn-bg);border:1px solid #0a3a1a;border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">▲ Ingresos</div>
+      <div style="font-family:var(--mono);color:var(--green);font-size:1rem;font-weight:800">L ${fmt(totalIn)}</div>
+    </div>
+    <div style="background:var(--red-bg);border:1px solid #3d0a0a;border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">▼ Egresos</div>
+      <div style="font-family:var(--mono);color:var(--red);font-size:1rem;font-weight:800">L ${fmt(totalOut)}</div>
+    </div>
+    <div style="background:${balance>=0?'var(--grn-bg)':'var(--red-bg)'};border:1px solid ${balance>=0?'#0a3a1a':'#3d0a0a'};border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">⚖ Balance</div>
+      <div style="font-family:var(--mono);color:${balance>=0?'var(--green)':'var(--red)'};font-size:1rem;font-weight:800">L ${fmt(balance)}</div>
+    </div>
+    <div style="background:var(--acc-bg);border:1px solid #0a2a3a;border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">💰 Ganancia</div>
+      <div style="font-family:var(--mono);color:var(--acc);font-size:1rem;font-weight:800">L ${fmt(ganancia)}</div>
+    </div>
+    <div style="background:#1a0a2e;border:1px solid #3d1a5a;border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">🙏 Diezmo/Ofrenda</div>
+      <div style="font-family:var(--mono);color:#c084fc;font-size:1rem;font-weight:800">L ${fmt(diezmos)}</div>
+    </div>
+    <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:9px;padding:12px;text-align:center">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:4px">📄 Registros</div>
+      <div style="font-family:var(--mono);color:var(--text);font-size:1rem;font-weight:800">${regs.length}</div>
+    </div>`;
+
+  // ── GRÁFICA DE BARRAS MENSUAL ──
+  const porMes = {};
+  regs.forEach(r => {
+    const mes = (r.fechaKey || '').slice(0,7);
+    if (!mes) return;
+    if (!porMes[mes]) porMes[mes] = {in:0, out:0};
+    if (r.tipo==='IN')  porMes[mes].in  += r.neto||0;
+    if (r.tipo==='OUT') porMes[mes].out += r.neto||0;
+  });
+  const meses = Object.keys(porMes).sort();
+  const maxVal = Math.max(...meses.map(m => Math.max(porMes[m].in, porMes[m].out)), 1);
+  const barH   = 120;
+
+  if (!meses.length) {
+    document.getElementById('rep-chart-barras').innerHTML =
+      '<div style="text-align:center;color:var(--muted);padding:30px;font-size:.75rem">Sin datos para mostrar</div>';
+  } else {
+    document.getElementById('rep-chart-barras').innerHTML = `
+    <div style="display:flex;align-items:flex-end;gap:8px;min-width:${meses.length*70}px;padding:4px 0 0">
+      ${meses.map(m => {
+        const hIn  = Math.round((porMes[m].in  / maxVal) * barH);
+        const hOut = Math.round((porMes[m].out / maxVal) * barH);
+        const [y,mo] = m.split('-');
+        const label  = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][parseInt(mo)-1]+' '+y.slice(2);
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px">
+          <div style="font-size:.55rem;color:var(--green);font-weight:700;font-family:var(--mono)">L${fmt(porMes[m].in)}</div>
+          <div style="display:flex;align-items:flex-end;gap:3px;height:${barH}px">
+            <div title="Ingreso: L${fmt(porMes[m].in)}" style="width:22px;height:${hIn}px;background:var(--green);border-radius:3px 3px 0 0;min-height:2px;cursor:pointer"></div>
+            <div title="Egreso: L${fmt(porMes[m].out)}" style="width:22px;height:${hOut}px;background:var(--red);border-radius:3px 3px 0 0;min-height:2px;cursor:pointer"></div>
+          </div>
+          <div style="font-size:.58rem;color:var(--muted);font-weight:600;text-align:center">${label}</div>
+          <div style="font-size:.55rem;color:var(--red);font-weight:700;font-family:var(--mono)">L${fmt(porMes[m].out)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="display:flex;gap:14px;margin-top:8px">
+      <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:12px;background:var(--green);border-radius:2px"></div><span style="font-size:.62rem;color:var(--muted)">Ingresos</span></div>
+      <div style="display:flex;align-items:center;gap:5px"><div style="width:12px;height:12px;background:var(--red);border-radius:2px"></div><span style="font-size:.62rem;color:var(--muted)">Egresos</span></div>
+    </div>`;
+  }
+
+  // ── GRÁFICA POR CATEGORÍA ──
+  const porCat = {};
+  regs.forEach(r => {
+    const c = r.categoria || 'Sin categoría';
+    if (!porCat[c]) porCat[c] = 0;
+    porCat[c] += r.neto || 0;
+  });
+  const coloresCat = ['var(--acc)','var(--green)','var(--red)','#c084fc','var(--amber)','var(--blue)','#f97316','#06b6d4','#84cc16','#ec4899'];
+  const catKeys = Object.keys(porCat).sort((a,b)=>porCat[b]-porCat[a]);
+  const totalCat = catKeys.reduce((s,k)=>s+porCat[k],0);
+
+  document.getElementById('rep-chart-cat').innerHTML = catKeys.length ? catKeys.map((k,i) => {
+    const pct = totalCat > 0 ? (porCat[k]/totalCat*100).toFixed(1) : 0;
+    const col = coloresCat[i % coloresCat.length];
+    return `<div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px 14px;min-width:140px;flex:1">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <div style="width:10px;height:10px;border-radius:50%;background:${col};flex-shrink:0"></div>
+        <div style="font-size:.67rem;font-weight:700;color:var(--text)">${k}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:.88rem;font-weight:800;color:${col}">L ${fmt(porCat[k])}</div>
+      <div style="background:var(--s2);border-radius:4px;height:5px;margin-top:6px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${col};border-radius:4px"></div>
+      </div>
+      <div style="font-size:.6rem;color:var(--muted);margin-top:3px">${pct}%</div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:.75rem;padding:10px">Sin datos</div>';
+
+  // ── RENTABILIDAD POR PROYECTO ──
+  const porProy = {};
+  regs.filter(r=>r.proyectoId).forEach(r => {
+    if (!porProy[r.proyectoId]) porProy[r.proyectoId] = {in:0,out:0,gan:0,n:0};
+    if (r.tipo==='IN')  { porProy[r.proyectoId].in  += r.neto||0; porProy[r.proyectoId].gan += r.ganancia||0; }
+    if (r.tipo==='OUT') porProy[r.proyectoId].out += r.neto||0;
+    porProy[r.proyectoId].n++;
+  });
+  const proyKeys = Object.keys(porProy).sort((a,b)=>porProy[b].in-porProy[a].in);
+  document.getElementById('rep-proyectos').innerHTML = proyKeys.length ?
+    `<div style="overflow-x:auto"><table class="htable" style="width:100%">
+      <thead><tr><th>Proyecto</th><th>Ingresos</th><th>Egresos</th><th>Ganancia</th><th>Registros</th></tr></thead>
+      <tbody>${proyKeys.map(id => {
+        const p   = proyectos.find(p=>p.id==id);
+        const nom = p ? p.nombre : id;
+        const d   = porProy[id];
+        const bal = d.in - d.out;
+        return `<tr>
+          <td style="color:var(--blue);font-weight:700">${nom}</td>
+          <td style="font-family:var(--mono);color:var(--green)">L ${fmt(d.in)}</td>
+          <td style="font-family:var(--mono);color:var(--red)">L ${fmt(d.out)}</td>
+          <td style="font-family:var(--mono);color:${bal>=0?'var(--green)':'var(--red)'};font-weight:800">L ${fmt(bal)}</td>
+          <td style="color:var(--muted);text-align:center">${d.n}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>` :
+    '<div style="color:var(--muted);font-size:.75rem;padding:10px">Sin registros con proyecto asignado</div>';
+
+  // ── TOP CLIENTES ──
+  const porCliente = {};
+  regs.filter(r=>r.cliente && r.tipo==='IN').forEach(r => {
+    const c = r.cliente.trim();
+    if (!porCliente[c]) porCliente[c] = {total:0, n:0};
+    porCliente[c].total += r.neto||0;
+    porCliente[c].n++;
+  });
+  const clienteKeys = Object.keys(porCliente).sort((a,b)=>porCliente[b].total-porCliente[a].total).slice(0,10);
+  const maxCli = clienteKeys.length ? porCliente[clienteKeys[0]].total : 1;
+  document.getElementById('rep-clientes').innerHTML = clienteKeys.length ?
+    clienteKeys.map((c,i) => {
+      const pct = (porCliente[c].total / maxCli * 100).toFixed(0);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--bd2)">
+        <div style="font-size:.7rem;color:var(--muted);font-family:var(--mono);width:18px;text-align:right">${i+1}</div>
+        <div style="flex:1">
+          <div style="font-size:.72rem;font-weight:700;color:var(--text);margin-bottom:3px">${c}</div>
+          <div style="background:var(--s3);border-radius:4px;height:5px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;background:var(--acc);border-radius:4px"></div>
+          </div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-family:var(--mono);font-size:.75rem;font-weight:800;color:var(--green)">L ${fmt(porCliente[c].total)}</div>
+          <div style="font-size:.6rem;color:var(--muted)">${porCliente[c].n} registro${porCliente[c].n>1?'s':''}</div>
+        </div>
+      </div>`;
+    }).join('') :
+    '<div style="color:var(--muted);font-size:.75rem;padding:10px">Sin datos de clientes</div>';
+
+  // ── TABLA DETALLE ──
+  const sorted = [...regs].sort((a,b)=>(b.fechaKey||'').localeCompare(a.fechaKey||''));
+  document.getElementById('rep-count').textContent = `${sorted.length} registro${sorted.length!==1?'s':''}`;
+  document.getElementById('rep-tbody').innerHTML = sorted.map(r => {
+    const p = r.proyectoId && proyectos.find(p=>p.id==r.proyectoId);
+    return `<tr>
+      <td style="font-family:var(--mono);color:var(--muted);white-space:nowrap">${r.fecha||''}</td>
+      <td style="color:var(--text);max-width:200px">${r.desc||''}</td>
+      <td style="color:var(--muted);font-size:.7rem">${r.categoria||'—'}</td>
+      <td style="color:var(--blue);font-size:.7rem">${p?p.nombre:(r.proyectoId||'—')}</td>
+      <td><span class="badge ${r.tipo==='IN'?'b-in':'b-out'}">${r.tipo}</span></td>
+      <td style="font-family:var(--mono);font-weight:700;color:${r.tipo==='IN'?'var(--green)':'var(--red)'}">L ${fmt(r.neto||0)}</td>
+      <td style="font-family:var(--mono);color:var(--acc)">${r.ganancia>0?'L '+fmt(r.ganancia):'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function limpiarFiltrosRep() {
+  document.getElementById('rep-desde').value = '';
+  document.getElementById('rep-hasta').value = '';
+  document.getElementById('rep-tipo').value  = '';
+  document.getElementById('rep-cat').value   = '';
+  document.getElementById('rep-proy').value  = '';
+  renderReportes();
+}
+
+function exportarReporteCSV() {
+  const regs = filtrarRegistrosRep();
+  if (!regs.length) { toast('Sin datos para exportar','err'); return; }
+  const cab  = ['Fecha','Descripción','Categoría','Proyecto','Tipo','Monto','Costo','Ganancia','Diezmo','Cliente','Método'];
+  const rows = regs.map(r => {
+    const p = r.proyectoId && proyectos.find(p=>p.id==r.proyectoId);
+    return [
+      r.fecha||'', `"${(r.desc||'').replace(/"/g,'""')}"`,
+      r.categoria||'', p?p.nombre:(r.proyectoId||''),
+      r.tipo||'', (r.neto||0).toFixed(2),
+      (r.costo||0).toFixed(2), (r.ganancia||0).toFixed(2),
+      (r.diezmo||0).toFixed(2),
+      `"${(r.cliente||'').replace(/"/g,'""')}"`,
+      r.bancoNombre||''
+    ].join(',');
+  });
+  const csv  = [cab.join(','), ...rows].join('\n');
+  const blob = new Blob(['\ufeff'+csv], {type:'text/csv;charset=utf-8'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `Reporte_RivasTech_${hoyKey()}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast('Reporte exportado ✓');
+}
 
 </script>
 </body>
