@@ -1909,18 +1909,62 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
 <!-- MODAL DATOS DEL NEGOCIO (encabezado de los PDF) -->
 <div class="overlay" id="modal-empresa" onclick="if(event.target===this)cerrarModalEmpresa()">
-  <div class="modal" style="max-width:420px;width:95%">
-    <h3 style="margin-bottom:10px">⚙️ Datos del negocio (encabezado de los PDF)</h3>
-    <div style="display:flex;flex-direction:column;gap:7px">
+  <div class="modal" style="max-width:460px;width:95%;max-height:90vh;overflow-y:auto">
+    <h3 style="margin-bottom:10px">⚙️ Datos del negocio</h3>
+
+    <!-- DATOS GENERALES -->
+    <div style="font-size:.6rem;color:var(--acc);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Información general</div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">
       <input type="text" id="emp-nombre" class="pi" placeholder="Nombre del negocio" style="margin:0">
       <div style="display:flex;gap:6px">
-        <input type="text" id="emp-rtn" class="pi" placeholder="RTN (opcional)" style="margin:0;flex:1">
+        <input type="text" id="emp-rtn" class="pi" placeholder="RTN del negocio (ej. 0501-1990-00001)" style="margin:0;flex:1">
         <input type="text" id="emp-tel" class="pi" placeholder="Teléfono" style="margin:0;flex:1">
       </div>
-      <input type="text" id="emp-dir" class="pi" placeholder="Dirección (opcional)" style="margin:0">
-      <input type="text" id="emp-pie" class="pi" placeholder="Mensaje al pie (ej. Gracias por su preferencia)" style="margin:0">
+      <input type="text" id="emp-dir" class="pi" placeholder="Dirección del negocio" style="margin:0">
+      <input type="text" id="emp-pie" class="pi" placeholder="Mensaje al pie del documento" style="margin:0">
     </div>
-    <div class="modal-btns" style="margin-top:12px">
+
+    <!-- DATOS SAR / FACTURACIÓN -->
+    <div style="font-size:.6rem;color:var(--amber);font-weight:800;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">🧾 Datos de facturación SAR Honduras</div>
+    <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:10px">
+      <div style="font-size:.65rem;color:var(--muted);margin-bottom:8px">Complete estos datos cuando el SAR le habilite su CAI. Hasta entonces el sistema emite recibos.</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <input type="text" id="emp-cai" class="pi" placeholder="CAI (ej. ABC123-DEF456-GHI789-JKL012-MNO345-PQ)" style="margin:0;font-family:var(--mono);font-size:.72rem">
+        <div style="display:flex;gap:6px">
+          <input type="text" id="emp-corr-desde" class="pi" placeholder="Correlativo desde (ej. 000-001-01-00000001)" style="margin:0;flex:1;font-size:.68rem">
+          <input type="text" id="emp-corr-hasta" class="pi" placeholder="Correlativo hasta" style="margin:0;flex:1;font-size:.68rem">
+        </div>
+        <div style="display:flex;gap:6px">
+          <div style="flex:1">
+            <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Fecha límite de emisión</div>
+            <input type="date" id="emp-fecha-limite" class="pi" style="margin:0;width:100%">
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Próximo número</div>
+            <input type="number" id="emp-corr-actual" class="pi" placeholder="1" style="margin:0;width:100%">
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="flex:1">
+            <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">ISV aplicable</div>
+            <select id="emp-isv" class="pi" style="margin:0;width:100%">
+              <option value="0">Exento (0%)</option>
+              <option value="15" selected>15% — General</option>
+              <option value="18">18% — Bebidas/Tabaco</option>
+            </select>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Estado CAI</div>
+            <select id="emp-sar-activo" class="pi" style="margin:0;width:100%">
+              <option value="0">⏳ Pendiente (emite recibos)</option>
+              <option value="1">✅ Activo (emite facturas)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-btns">
       <button class="mbtn-cancel" onclick="cerrarModalEmpresa()">Cancelar</button>
       <button class="mbtn-ok" onclick="guardarEmpresa()">💾 Guardar</button>
     </div>
@@ -2299,7 +2343,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbwRMIng8meKIqK9xaglY73CeLNQfpHk8Wa52AVitPnpRNHqv2vgm7eD8MjdVNDpTSPg/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbxuGhFffzto8d-a3qol8Oh2cjz9Ny-e0Gi2tgAKNoYAALmq2WuKOvQjk9TWWjd1DEZJJQ/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -5620,33 +5664,80 @@ function renderCreditos() {
    con opción de descargar o compartir por WhatsApp
    ═══════════════════════════════════════════════════════ */
 let docPendiente = null;
-const EMPRESA_DEF = { nombre: 'MultiServicios Rivas Tech Solutions', rtn: '', tel: '', dir: '', pie: 'Gracias por su preferencia.' };
+const EMPRESA_DEF = {
+  nombre: 'MultiServicios Rivas Tech Solutions',
+  rtn: '', tel: '', dir: '',
+  pie: 'Gracias por su preferencia.',
+  // Campos SAR
+  cai: '', corrDesde: '', corrHasta: '',
+  fechaLimite: '', corrActual: 1,
+  isv: 15, sarActivo: 0
+};
 
 function getEmpresa() {
   try { return { ...EMPRESA_DEF, ...JSON.parse(localStorage.getItem('cr_empresa') || '{}') }; }
   catch (e) { return { ...EMPRESA_DEF }; }
 }
+
 function abrirModalEmpresa() {
   const E = getEmpresa();
-  document.getElementById('emp-nombre').value = E.nombre;
-  document.getElementById('emp-rtn').value    = E.rtn;
-  document.getElementById('emp-tel').value    = E.tel;
-  document.getElementById('emp-dir').value    = E.dir;
-  document.getElementById('emp-pie').value    = E.pie;
+  document.getElementById('emp-nombre').value       = E.nombre;
+  document.getElementById('emp-rtn').value          = E.rtn;
+  document.getElementById('emp-tel').value          = E.tel;
+  document.getElementById('emp-dir').value          = E.dir;
+  document.getElementById('emp-pie').value          = E.pie;
+  document.getElementById('emp-cai').value          = E.cai          || '';
+  document.getElementById('emp-corr-desde').value   = E.corrDesde    || '';
+  document.getElementById('emp-corr-hasta').value   = E.corrHasta    || '';
+  document.getElementById('emp-fecha-limite').value = E.fechaLimite  || '';
+  document.getElementById('emp-corr-actual').value  = E.corrActual   || 1;
+  document.getElementById('emp-isv').value          = E.isv          || 15;
+  document.getElementById('emp-sar-activo').value   = E.sarActivo    || 0;
   document.getElementById('modal-empresa').classList.add('open');
 }
+
 function cerrarModalEmpresa() { document.getElementById('modal-empresa').classList.remove('open'); }
+
 function guardarEmpresa() {
+  const corrActual = parseInt(document.getElementById('emp-corr-actual').value) || 1;
   const E = {
-    nombre: document.getElementById('emp-nombre').value.trim() || EMPRESA_DEF.nombre,
-    rtn:    document.getElementById('emp-rtn').value.trim(),
-    tel:    document.getElementById('emp-tel').value.trim(),
-    dir:    document.getElementById('emp-dir').value.trim(),
-    pie:    document.getElementById('emp-pie').value.trim()
+    nombre:      document.getElementById('emp-nombre').value.trim()      || EMPRESA_DEF.nombre,
+    rtn:         document.getElementById('emp-rtn').value.trim(),
+    tel:         document.getElementById('emp-tel').value.trim(),
+    dir:         document.getElementById('emp-dir').value.trim(),
+    pie:         document.getElementById('emp-pie').value.trim(),
+    cai:         document.getElementById('emp-cai').value.trim(),
+    corrDesde:   document.getElementById('emp-corr-desde').value.trim(),
+    corrHasta:   document.getElementById('emp-corr-hasta').value.trim(),
+    fechaLimite: document.getElementById('emp-fecha-limite').value,
+    corrActual,
+    isv:         parseFloat(document.getElementById('emp-isv').value)     || 15,
+    sarActivo:   parseInt(document.getElementById('emp-sar-activo').value) || 0
   };
   localStorage.setItem('cr_empresa', JSON.stringify(E));
   cerrarModalEmpresa();
   toast('Datos del negocio guardados ✓');
+}
+
+/* Generar número de correlativo SAR formateado */
+function generarCorrelativo() {
+  const E = getEmpresa();
+  const n = E.corrActual || 1;
+  // Formato: 000-001-01-00000001
+  const partes = (E.corrDesde || '000-001-01-00000001').split('-');
+  if (partes.length === 4) {
+    return `${partes[0]}-${partes[1]}-${partes[2]}-${String(n).padStart(8,'0')}`;
+  }
+  return String(n).padStart(8,'0');
+}
+
+/* Incrementar correlativo y guardar */
+function incrementarCorrelativo() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('cr_empresa') || '{}');
+    raw.corrActual = (raw.corrActual || 1) + 1;
+    localStorage.setItem('cr_empresa', JSON.stringify(raw));
+  } catch(e) {}
 }
 
 /* Teléfonos recordados por nombre de cliente */
@@ -5838,28 +5929,84 @@ function docAbono(creditoId, n) {            // n = número cronológico del abo
 }
 
 function docRegistro(id) {
-  const r = registros.find(x => x.id == id); if (!r) return;
-  const E = getEmpresa();
+  const r   = registros.find(x => x.id == id); if (!r) return;
+  const E   = getEmpresa();
   const esIn = r.tipo === 'IN';
   const monto = esIn ? (r.bruto || r.neto || 0) : (r.neto || 0);
+  const usarFactura = esIn && E.sarActivo == 1 && E.cai;
+
+  // Calcular ISV si aplica factura
+  const pctISV   = usarFactura ? (E.isv || 15) : 0;
+  const baseIsv  = monto / (1 + pctISV / 100);
+  const montoIsv = monto - baseIsv;
+  const corrNum  = usarFactura ? generarCorrelativo() : numDoc(esIn ? 'REC' : 'EGR', r.id);
+
   abrirDoc({
-    titulo: esIn ? 'Recibo de ingreso' : 'Comprobante de egreso',
-    nombre: r.cliente || '',
-    archivo: (esIn ? 'Recibo_' : 'Egreso_') + (r.fecha || '').replace(/\//g, '-') + '_' + numDoc('', r.id) + '.pdf',
-    resumen: `<strong>${r.desc || '(sin descripción)'}</strong><br>${r.cliente ? r.cliente + ' · ' : ''}${r.fecha} ${r.hora || ''}<br>Monto: <strong>${L(monto)}</strong>`,
-    texto: `Hola${r.cliente ? ' ' + r.cliente : ''}, le comparto su ${esIn ? 'recibo' : 'comprobante'} de ${E.nombre}.\n${r.desc || ''}\nMonto: ${L(monto)} - Fecha: ${r.fecha}`,
+    titulo:  usarFactura ? 'Factura' : (esIn ? 'Recibo de ingreso' : 'Comprobante de egreso'),
+    nombre:  r.cliente || '',
+    archivo: (usarFactura ? 'Factura_' : esIn ? 'Recibo_' : 'Egreso_') +
+             (r.fecha || '').replace(/\//g, '-') + '_' + corrNum.replace(/\//g,'-') + '.pdf',
+    resumen: `<strong>${r.desc || '(sin descripción)'}</strong><br>
+              ${r.cliente ? r.cliente + ' · ' : ''}${r.fecha} ${r.hora || ''}<br>
+              ${usarFactura ? `ISV ${pctISV}%: <strong>${L(montoIsv)}</strong> · ` : ''}
+              Total: <strong>${L(monto)}</strong>`,
+    texto: `Hola${r.cliente ? ' ' + r.cliente : ''}, le comparto su ${usarFactura ? 'factura' : esIn ? 'recibo' : 'comprobante'} de ${E.nombre}.\n${r.desc || ''}\nTotal: ${L(monto)} - Fecha: ${r.fecha}`,
+    _esfactura: usarFactura,
     render: doc => {
-      let y = pdfEncabezado(doc, esIn ? 'RECIBO DE INGRESO' : 'COMPROBANTE DE EGRESO', numDoc(esIn ? 'REC' : 'EGR', r.id), r.fecha);
-      if (r.cliente) y = pdfCampo(doc, y, r.tipoContacto === 'proveedor' ? 'Proveedor:' : (esIn ? 'Recibido de:' : 'Pagado a:'), r.cliente);
+      const titulo = usarFactura ? 'FACTURA' : (esIn ? 'RECIBO DE INGRESO' : 'COMPROBANTE DE EGRESO');
+      let y = pdfEncabezado(doc, titulo, corrNum, r.fecha);
+
+      // Bloque SAR — solo en facturas
+      if (usarFactura) {
+        doc.setFillColor(245, 248, 250);
+        doc.rect(15, y, 180, 22, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); doc.setTextColor(60, 80, 100);
+        doc.text('CAI:', 17, y + 5);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(20,20,20);
+        doc.text(E.cai || '—', 28, y + 5);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 80, 100);
+        doc.text('Rango autorizado:', 17, y + 11);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(20,20,20);
+        doc.text(`${E.corrDesde || '—'}  al  ${E.corrHasta || '—'}`, 52, y + 11);
+        doc.setFont('helvetica', 'bold'); doc.setTextColor(60, 80, 100);
+        doc.text('Fecha límite de emisión:', 17, y + 17);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(20,20,20);
+        doc.text(E.fechaLimite || '—', 62, y + 17);
+        doc.setDrawColor(200,210,220); doc.setLineWidth(0.3); doc.line(15, y + 22, 195, y + 22);
+        y += 26;
+      }
+
+      // Datos del cliente desde modal-doc
+      const cli = docPendiente && docPendiente._clienteDoc;
+      const nomCli = (cli && cli.nombre) || r.cliente || '';
+      const rtnCli = (cli && cli.rtn)    || '';
+      const dirCli = (cli && cli.dir)    || '';
+
+      if (nomCli) y = pdfCampo(doc, y, r.tipoContacto === 'proveedor' ? 'Proveedor:' : (esIn ? 'Recibido de:' : 'Pagado a:'), nomCli);
+      if (rtnCli) y = pdfCampo(doc, y, 'RTN cliente:', rtnCli);
+      if (dirCli) y = pdfCampo(doc, y, 'Dirección:', dirCli);
       y = pdfCampo(doc, y, 'Concepto:', r.desc);
       y = pdfCampo(doc, y, 'Fecha y hora:', (r.fecha || '') + '  ' + (r.hora || ''));
-      if (r.categoria)  y = pdfCampo(doc, y, 'Categoría:', r.categoria);
-      if (r.metodoPago) y = pdfCampo(doc, y, 'Método de pago:', r.metodoPago);
-      if (r.pagado)     y = pdfCampo(doc, y, 'Estado de pago:', r.pagado);
+      if (r.categoria)     y = pdfCampo(doc, y, 'Categoría:', r.categoria);
+      if (r.metodoPago)    y = pdfCampo(doc, y, 'Método de pago:', r.metodoPago);
+      if (r.pagado)        y = pdfCampo(doc, y, 'Estado de pago:', r.pagado);
       if (r.observaciones) y = pdfCampo(doc, y, 'Observaciones:', r.observaciones);
       y += 6;
-      y = pdfTotales(doc, y, [{ t: 'TOTAL:', v: L(monto), destacar: true }]);
+
+      // Totales — con ISV si es factura
+      if (usarFactura) {
+        y = pdfTotales(doc, y, [
+          { t: `Subtotal (sin ISV):`, v: L(baseIsv) },
+          { t: `ISV ${pctISV}%:`,     v: L(montoIsv) },
+          { t: 'TOTAL A PAGAR:',      v: L(monto), destacar: true }
+        ]);
+      } else {
+        y = pdfTotales(doc, y, [{ t: 'TOTAL:', v: L(monto), destacar: true }]);
+      }
       pdfFirmas(doc, y, esIn ? 'Recibido por' : 'Entregado por', esIn ? 'Cliente' : 'Recibido por');
+
+      // Incrementar correlativo solo al generar factura real
+      if (usarFactura) incrementarCorrelativo();
     }
   });
 }
