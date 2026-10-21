@@ -2343,7 +2343,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 /* ═══════════════════════════════════════════
    CAMBIO 4: Google Apps Script URL
    ═══════════════════════════════════════════ */
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxuGhFffzto8d-a3qol8Oh2cjz9Ny-e0Gi2tgAKNoYAALmq2WuKOvQjk9TWWjd1DEZJJQ/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbygKSTT3C5szDfDHffMJ4R5-m9yo4M6ibuZMjFukYFZ-OlPiyTPHIWIvHF17GMC6FLUfg/exec';
 
 /* ═══ ESTADO ═══ */
 let registros = [];
@@ -2370,6 +2370,47 @@ const TZ = 'America/Tegucigalpa';
 function hoyKey()    { return new Date().toLocaleDateString('en-CA', {timeZone: TZ}); }
 function fechaHN(d)  { return (d||new Date()).toLocaleDateString('es-HN', {timeZone: TZ, day:'2-digit', month:'2-digit', year:'numeric'}); }
 function horaHN(d)   { return (d||new Date()).toLocaleTimeString('es-HN', {timeZone: TZ, hour:'2-digit', minute:'2-digit'}); }
+
+/* ═══ ORDEN CRONOLÓGICO — más reciente primero ═══ */
+/* Devuelve la fecha del registro como AAAA-MM-DD (o '' si no es válida). Formato Honduras: DD/MM/AAAA */
+function fechaKeyDe(r) {
+  let k = String(r.fechaKey || '');
+  if (!k || k === 'undefined') {
+    const f = String(r.fecha || '');
+    if (f.includes('T')) k = f.split('T')[0];
+    else if (f.includes('/')) {
+      const p = f.split('/');
+      if (p.length === 3) {
+        const a = parseInt(p[0]), b = parseInt(p[1]);
+        k = (b > 12 && a <= 12)
+          ? `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`   // vino MM/DD/AAAA
+          : `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;  // DD/MM/AAAA (normal)
+      }
+    } else k = f;
+  }
+  if (k.includes('T')) k = k.split('T')[0];
+  return /^\d{4}-\d{2}-\d{2}$/.test(k) ? k : '';
+}
+/* Hora en formato 24 h (HH:MM) — la hora guardada es 12 h ("06:33 p. m.") y como texto no ordena bien */
+function hora24(r) {
+  const s = String(r.hora || '').replace(/[\u202f\u00a0]/g, ' ').toLowerCase();
+  const m = s.match(/(\d{1,2})\s*:\s*(\d{2})/);
+  if (!m) return '00:00';
+  let h = parseInt(m[1]);
+  if (/p\s*\.?\s*m/.test(s) && h < 12) h += 12;
+  if (/a\s*\.?\s*m/.test(s) && h === 12) h = 0;
+  return String(h).padStart(2,'0') + ':' + m[2];
+}
+function claveOrden(r) {
+  const m = String(r.id || '').match(/-(\d{1,4})$/);          // consecutivo del ID: DDMMAAAA-HHMM-NNN
+  const seq = m ? ('0000' + m[1]).slice(-4) : '0000';
+  return (fechaKeyDe(r) || '0000-00-00') + ' ' + hora24(r) + ' ' + seq;
+}
+function cmpFechaDesc(a, b) { const x = claveOrden(a), y = claveOrden(b); return x < y ? 1 : x > y ? -1 : 0; }
+function ordenarRegistros() {
+  const k = new Map(registros.map(r => [r, claveOrden(r)]));
+  registros.sort((a, b) => { const x = k.get(a), y = k.get(b); return x < y ? 1 : x > y ? -1 : 0; });
+}
 
 /* ═══ GOOGLE APPS SCRIPT — SYNC ═══ */
 async function syncGAS() {
@@ -2422,28 +2463,8 @@ async function loadFromGAS() {
     if (data && data.registros && data.registros.length > 0) {
       /* Normalizar registros que vienen de Google Sheets */
       const regsNormalizados = data.registros.map(r => {
-        /* Normalizar fechaKey — puede venir en varios formatos */
-        let fk = r.fechaKey || r.fecha || '';
-        /* Si viene como DD/MM/YYYY convertir a YYYY-MM-DD */
-        if (fk && fk.includes('/')) {
-          const parts = fk.split('/');
-          if (parts.length === 3) {
-            /* Detectar si es DD/MM/YYYY o MM/DD/YYYY */
-            const p0 = parseInt(parts[0]);
-            const p1 = parseInt(parts[1]);
-            if (p0 > 12) {
-              /* DD/MM/YYYY */
-              fk = `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}`;
-            } else {
-              /* MM/DD/YYYY */
-              fk = `${parts[2]}-${parts[0].padStart(2,'0')}-${parts[1].padStart(2,'0')}`;
-            }
-          }
-        }
-        /* Si viene como objeto Date de Sheets */
-        if (fk && fk.toString().includes('T')) {
-          fk = fk.toString().split('T')[0];
-        }
+        /* Normalizar fechaKey — misma lógica que el resto del sistema (DD/MM/AAAA por defecto) */
+        const fk = fechaKeyDe(r);
         return {
           ...r,
           fechaKey:    fk,
@@ -2468,6 +2489,7 @@ async function loadFromGAS() {
       } else if (registros.length === 0) {
         registros = regsNormalizados;
       }
+      ordenarRegistros();
 
       calcular(); actualizarLog(); buildBancoFilter();
       renderDiezmoHist(); renderOfrendaHist(); renderProyectos();
@@ -4134,6 +4156,7 @@ function bolsillo(tipo) {
 
 /* ═══ LOG ═══ */
 function actualizarLog() {
+  ordenarRegistros();
   const el = document.getElementById('mlog');
   el.innerHTML = registros.slice(0,5).map(r => `
     <div class="mlog-item">
@@ -4185,12 +4208,7 @@ function getFiltrados() {
     if (desde  && r.fechaKey && r.fechaKey < desde) return false;
     if (hasta  && r.fechaKey && r.fechaKey > hasta) return false;
     return true;
-  }).sort((a, b) => {
-    // Ordenar por fecha descendente, luego por hora descendente
-    const fA = (a.fechaKey || '') + ' ' + (a.hora || '');
-    const fB = (b.fechaKey || '') + ' ' + (b.hora || '');
-    return fB.localeCompare(fA);
-  });
+  }).sort(cmpFechaDesc);   // más reciente primero (fecha + hora 24 h)
 }
 
 function renderHistorial() {
@@ -4209,20 +4227,7 @@ function renderHistorial() {
   if (!list.length) { body.innerHTML = '<div class="no-res">Sin movimientos · Ajusta los filtros</div>'; return; }
 
   const grupos = list.reduce((acc, r) => {
-    /* Normalizar la clave del grupo — siempre YYYY-MM-DD */
-    let k = r.fechaKey || '';
-    if (!k || k === 'undefined') {
-      const f = String(r.fecha || '');
-      if (f.includes('T')) k = f.split('T')[0];
-      else if (f.includes('/')) {
-        const p = f.split('/');
-        if (p.length === 3) k = parseInt(p[0]) > 12
-          ? `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`
-          : `${p[2]}-${p[0].padStart(2,'0')}-${p[1].padStart(2,'0')}`;
-      } else k = f;
-    }
-    if (k.includes('T')) k = k.split('T')[0];
-    if (!k) k = 'Sin fecha';
+    const k = fechaKeyDe(r) || 'Sin fecha';
     (acc[k] = acc[k] || []).push(r);
     return acc;
   }, {});
@@ -4244,14 +4249,14 @@ function renderHistorial() {
     return k;
   }
 
-  body.innerHTML = Object.keys(grupos).sort((a,b) => b.localeCompare(a)).map(k => `
+  body.innerHTML = Object.keys(grupos).sort((a,b) => a === 'Sin fecha' ? 1 : b === 'Sin fecha' ? -1 : b.localeCompare(a)).map(k => `
     <div class="dgroup">${fechaLegible(k, grupos[k][0])}</div>
     <table class="htable">
       <thead><tr>
         <th>Hora</th><th>Descripción</th><th>Cuenta</th><th>Proyecto</th><th>Diezmo</th><th>Ofrenda</th><th>Tipo</th><th>Neto</th><th>✏️</th>
       </tr></thead>
       <tbody>
-        ${grupos[k].sort((a,b) => (b.hora||'').localeCompare(a.hora||'')).map(r => `<tr>
+        ${grupos[k].sort(cmpFechaDesc).map(r => `<tr>
           <td style="font-family:var(--mono);color:var(--muted)">${r.hora}</td>
           <td style="color:var(--text)">${r.desc}${r.observaciones?`<br><span style="font-size:.65rem;color:var(--muted)">${r.observaciones}</span>`:''}${r.tipoMov&&r.tipoMov!=='normal'?`<br><span style="font-size:.63rem;color:var(--blue)">${r.tipoMov}</span>`:''}</td>
           <td style="color:var(--muted);font-size:.73rem">${r.bancoNombre}</td>
@@ -4361,6 +4366,7 @@ function loadAll() {
   const az = JSON.parse(localStorage.getItem('cr_agenda') || 'null');
   if (az) agendaNotas = az;
 
+  ordenarRegistros();
   calcular();
   actualizarLog();
   buildBancoFilter();
@@ -6460,7 +6466,7 @@ function renderReportes() {
     '<div style="color:var(--muted);font-size:.75rem;padding:10px">Sin datos de clientes</div>';
 
   // ── TABLA DETALLE ──
-  const sorted = [...regs].sort((a,b)=>(b.fechaKey||'').localeCompare(a.fechaKey||''));
+  const sorted = [...regs].sort(cmpFechaDesc);
   document.getElementById('rep-count').textContent = `${sorted.length} registro${sorted.length!==1?'s':''}`;
   document.getElementById('rep-tbody').innerHTML = sorted.map(r => {
     const p = r.proyectoId && proyectos.find(p=>p.id==r.proyectoId);
