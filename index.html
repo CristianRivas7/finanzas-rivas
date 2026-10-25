@@ -911,10 +911,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
       <!-- Caja de Registro -->
       <div class="psec psec-top" style="border-top-color:var(--acc)">
-        <div class="psec-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span>Caja de Registro</span>
-          <button onclick="abrirModalEmpresa()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:6px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700;white-space:nowrap">⚙️ Datos del negocio</button>
-        </div>
+        <div class="psec-title">Caja de Registro</div>
         <div class="type-sel">
           <button class="tbtn in" id="btn-in"  onclick="setType('IN')">▲ Ingreso</button>
           <button class="tbtn"    id="btn-out" onclick="setType('OUT')">▼ Egreso</button>
@@ -1008,9 +1005,13 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
                 🏪 Proveedor
               </button>
             </div>
-            <input type="text" id="reg-cliente" class="pi"
+            <input type="text" id="reg-cliente" class="pi" list="lista-clientes" autocomplete="off"
               placeholder="Nombre del cliente..."
+              oninput="mostrarClienteInfo()" onchange="mostrarClienteInfo()" onfocus="refrescarListaClientes()"
               style="margin:0;font-size:.77rem">
+            <datalist id="lista-clientes"></datalist>
+            <div id="reg-cliente-info" style="display:none;font-size:.6rem;line-height:1.35"></div>
+            <button type="button" onclick="abrirModalCliente()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:3px 6px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">👤 Datos del cliente</button>
           </div>
         </div>
         <div class="pi-row">
@@ -1891,11 +1892,20 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="modal" style="max-width:420px;width:95%">
     <h3 style="margin-bottom:10px">🧾 <span id="doc-titulo">Documento</span></h3>
     <div id="doc-resumen" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:10px;font-size:.75rem;color:var(--text2);line-height:1.6;margin-bottom:9px"></div>
+    <!-- Tipo de documento: Recibo o Factura -->
+    <div id="doc-tipo-box" style="display:none;margin-bottom:9px">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px">Tipo de documento</div>
+      <div style="display:flex;gap:6px">
+        <button type="button" id="doc-tipo-recibo"  onclick="cambiarTipoDoc('recibo')">🧾 Recibo</button>
+        <button type="button" id="doc-tipo-factura" onclick="cambiarTipoDoc('factura')">📄 Factura</button>
+      </div>
+      <div id="doc-tipo-nota" style="display:none;font-size:.62rem;color:var(--amber);margin-top:6px;line-height:1.4"></div>
+    </div>
     <!-- Datos del cliente para la factura/recibo -->
     <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:8px">
       <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:7px">📋 Datos del cliente (para el documento)</div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        <input type="text" id="doc-cliente-nombre" class="pi" placeholder="Nombre del cliente" style="margin:0">
+        <input type="text" id="doc-cliente-nombre" class="pi" list="lista-clientes" autocomplete="off" onchange="autocompletarClienteDoc()" placeholder="Nombre del cliente" style="margin:0">
         <input type="text" id="doc-cliente-rtn"    class="pi" placeholder="RTN del cliente (opcional)" style="margin:0">
         <input type="text" id="doc-cliente-dir"    class="pi" placeholder="Dirección del cliente (opcional)" style="margin:0">
       </div>
@@ -1974,6 +1984,24 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- MODAL DATOS DEL CLIENTE (directorio de clientes guardados) -->
+<div class="overlay" id="modal-cliente" onclick="if(event.target===this)cerrarModalCliente()">
+  <div class="modal" style="max-width:420px;width:95%">
+    <h3 style="margin-bottom:10px">👤 Datos del cliente</h3>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="mcli-nombre" class="pi" list="lista-clientes" autocomplete="off" onchange="cargarDatosClienteModal()" placeholder="Nombre del cliente (escriba o elija uno guardado)" style="margin:0">
+      <input type="text" id="mcli-rtn" class="pi" placeholder="RTN del cliente (opcional)" style="margin:0">
+      <input type="tel"  id="mcli-tel" class="pi" placeholder="WhatsApp / teléfono (opcional)" style="margin:0">
+      <input type="text" id="mcli-dir" class="pi" placeholder="Dirección (opcional)" style="margin:0">
+    </div>
+    <div style="font-size:.6rem;color:var(--dim);margin-top:7px;line-height:1.4">Se guardan en este dispositivo y se usan solos en los recibos y facturas de ese cliente.</div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarModalCliente()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarClienteModal()">💾 Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR REGISTRO -->
 <div class="overlay" id="modal-editar" onclick="if(event.target===this)cerrarEditar()">
   <div class="modal" style="max-width:460px;width:95%">
@@ -1987,7 +2015,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       </div>
       <div style="display:flex;gap:6px">
         <input type="number" id="edit-costo"    class="pi" placeholder="Costo repuesto" style="margin:0;flex:1">
-        <input type="text"   id="edit-cliente"  class="pi" placeholder="Cliente/Proveedor" style="margin:0;flex:1">
+        <input type="text"   id="edit-cliente"  class="pi" list="lista-clientes" placeholder="Cliente/Proveedor" style="margin:0;flex:1">
       </div>
       <div style="display:flex;gap:6px">
         <select id="edit-categoria" class="pi" style="margin:0;flex:1;font-size:.77rem">
@@ -3586,6 +3614,7 @@ function guardar() {
   document.getElementById('com-prev').classList.remove('show');
   limpiarImagenReg();
   toggleClienteProv('cliente'); // reset a cliente por defecto
+  mostrarClienteInfo(); refrescarListaClientes();
 
   actualizarLog(); calcular(); saveAll(); buildBancoFilter();
   toast(`${currentType === 'IN' ? '▲ Ingreso' : '▼ Egreso'} guardado: L ${fmt(neto)}`);
@@ -5700,7 +5729,7 @@ function abrirModalEmpresa() {
   document.getElementById('emp-corr-hasta').value   = E.corrHasta    || '';
   document.getElementById('emp-fecha-limite').value = E.fechaLimite  || '';
   document.getElementById('emp-corr-actual').value  = E.corrActual   || 1;
-  document.getElementById('emp-isv').value          = E.isv          || 15;
+  document.getElementById('emp-isv').value          = (E.isv === 0 || E.isv === '0') ? 0 : (E.isv || 15);
   document.getElementById('emp-sar-activo').value   = E.sarActivo    || 0;
   document.getElementById('modal-empresa').classList.add('open');
 }
@@ -5720,7 +5749,7 @@ function guardarEmpresa() {
     corrHasta:   document.getElementById('emp-corr-hasta').value.trim(),
     fechaLimite: document.getElementById('emp-fecha-limite').value,
     corrActual,
-    isv:         parseFloat(document.getElementById('emp-isv').value)     || 15,
+    isv:         (v => isNaN(v) ? 15 : v)(parseFloat(document.getElementById('emp-isv').value)),
     sarActivo:   parseInt(document.getElementById('emp-sar-activo').value) || 0
   };
   localStorage.setItem('cr_empresa', JSON.stringify(E));
@@ -5937,18 +5966,22 @@ function docAbono(creditoId, n) {            // n = número cronológico del abo
   });
 }
 
-function docRegistro(id) {
+function docRegistro(id, tipoPedido, keep) {
   const r   = registros.find(x => x.id == id); if (!r) return;
   const E   = getEmpresa();
   const esIn = r.tipo === 'IN';
   const monto = esIn ? (r.bruto || r.neto || 0) : (r.neto || 0);
-  const usarFactura = esIn && E.sarActivo == 1 && E.cai;
+  // Factura solo si hay CAI activo, vigente y con correlativos disponibles; si no, recibo
+  const disp = esIn ? facturaDisponible(r.id) : { ok: false, motivo: '' };
+  let tipoDoc = tipoPedido || (esIn && disp.ok ? 'factura' : 'recibo');
+  if (tipoDoc === 'factura' && !disp.ok) { tipoDoc = 'recibo'; if (tipoPedido) toast(disp.motivo, 'warn'); }
+  const usarFactura = esIn && tipoDoc === 'factura';
 
   // Calcular ISV si aplica factura
-  const pctISV   = usarFactura ? (E.isv || 15) : 0;
+  const pctISV   = usarFactura ? (isNaN(parseFloat(E.isv)) ? 15 : parseFloat(E.isv)) : 0;
   const baseIsv  = monto / (1 + pctISV / 100);
   const montoIsv = monto - baseIsv;
-  const corrNum  = usarFactura ? generarCorrelativo() : numDoc(esIn ? 'REC' : 'EGR', r.id);
+  const corrNum  = usarFactura ? (getFacturaNo(r.id) || generarCorrelativo()) : numDoc(esIn ? 'REC' : 'EGR', r.id);
 
   abrirDoc({
     titulo:  usarFactura ? 'Factura' : (esIn ? 'Recibo de ingreso' : 'Comprobante de egreso'),
@@ -5961,9 +5994,14 @@ function docRegistro(id) {
               Total: <strong>${L(monto)}</strong>`,
     texto: `Hola${r.cliente ? ' ' + r.cliente : ''}, le comparto su ${usarFactura ? 'factura' : esIn ? 'recibo' : 'comprobante'} de ${E.nombre}.\n${r.desc || ''}\nTotal: ${L(monto)} - Fecha: ${r.fecha}`,
     _esfactura: usarFactura,
+    registroId: r.id, _soportaFactura: esIn, _tipoDoc: tipoDoc,
+    _facturaMotivo: (esIn && !disp.ok) ? (disp.motivo || '') : '', _keep: keep,
     render: doc => {
       const titulo = usarFactura ? 'FACTURA' : (esIn ? 'RECIBO DE INGRESO' : 'COMPROBANTE DE EGRESO');
-      let y = pdfEncabezado(doc, titulo, corrNum, r.fecha);
+      // El correlativo se asigna una sola vez por registro: reimprimir no gasta números nuevos
+      const noFactura = usarFactura ? (getFacturaNo(r.id) || generarCorrelativo()) : corrNum;
+      if (usarFactura && !getFacturaNo(r.id)) { setFacturaNo(r.id, noFactura); incrementarCorrelativo(); }
+      let y = pdfEncabezado(doc, titulo, noFactura, r.fecha);
 
       // Bloque SAR — solo en facturas
       if (usarFactura) {
@@ -5987,7 +6025,7 @@ function docRegistro(id) {
 
       // Datos del cliente desde modal-doc
       const cli = docPendiente && docPendiente._clienteDoc;
-      const nomCli = (cli && cli.nombre) || r.cliente || '';
+      const nomCli = (cli && cli.nombre) || r.cliente || (usarFactura ? 'Consumidor Final' : '');
       const rtnCli = (cli && cli.rtn)    || '';
       const dirCli = (cli && cli.dir)    || '';
 
@@ -6014,8 +6052,6 @@ function docRegistro(id) {
       }
       pdfFirmas(doc, y, esIn ? 'Recibido por' : 'Entregado por', esIn ? 'Cliente' : 'Recibido por');
 
-      // Incrementar correlativo solo al generar factura real
-      if (usarFactura) incrementarCorrelativo();
     }
   });
 }
@@ -6059,8 +6095,129 @@ function abrirDoc(d) {
   document.getElementById('doc-cliente-nombre').value      = d.nombre || '';
   document.getElementById('doc-cliente-rtn').value         = getClienteRTN(d.nombre);
   document.getElementById('doc-cliente-dir').value         = getClienteDir(d.nombre);
+  if (d._keep) {                                  // al cambiar Recibo/Factura se conserva lo ya escrito
+    document.getElementById('doc-cliente-nombre').value = d._keep.nombre;
+    document.getElementById('doc-cliente-rtn').value    = d._keep.rtn;
+    document.getElementById('doc-cliente-dir').value    = d._keep.dir;
+    document.getElementById('doc-tel').value            = d._keep.tel;
+  }
+  actualizarSelectorTipoDoc(d);
+  refrescarListaClientes();
   document.getElementById('modal-doc').classList.add('open');
   cargarJsPDF().catch(() => {});
+}
+
+/* ── Recibo o Factura ── */
+function _lsMap(k) { try { return JSON.parse(localStorage.getItem(k) || '{}'); } catch (e) { return {}; } }
+function _lsSet(k, m) { try { localStorage.setItem(k, JSON.stringify(m)); } catch (e) {} }
+function getFacturaNo(id) { return _lsMap('cr_facturas_emitidas')[String(id)] || ''; }
+function setFacturaNo(id, no) { const m = _lsMap('cr_facturas_emitidas'); m[String(id)] = no; _lsSet('cr_facturas_emitidas', m); }
+
+function facturaDisponible(registroId) {
+  if (getFacturaNo(registroId)) return { ok: true };            // ya emitida: se puede reimprimir
+  const E = getEmpresa();
+  if (!(E.sarActivo == 1 && E.cai))
+    return { ok: false, motivo: 'Para emitir facturas active su CAI en ⚙️ Datos del negocio (Estado CAI = Activo). Mientras tanto se emite recibo.' };
+  if (E.fechaLimite && E.fechaLimite < hoyKey())
+    return { ok: false, motivo: 'Su CAI venció el ' + E.fechaLimite + '. Actualícelo en ⚙️ Datos del negocio.' };
+  const ultimo = s => parseInt(String(s || '').split('-').pop(), 10);
+  const hasta = ultimo(E.corrHasta);
+  if (hasta && (E.corrActual || 1) > hasta)
+    return { ok: false, motivo: 'Se agotó el rango de correlativos autorizado por el SAR.' };
+  return { ok: true };
+}
+
+function actualizarSelectorTipoDoc(d) {
+  const box = document.getElementById('doc-tipo-box');
+  if (!box) return;
+  if (!d.registroId || !d._soportaFactura) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  const esF  = d._tipoDoc === 'factura';
+  const base = 'flex:1;padding:8px;border-radius:6px;font-size:.74rem;font-weight:800;cursor:pointer;font-family:var(--font);';
+  const on   = 'background:var(--grn-bg);color:var(--green);border:1px solid #0a3a1a;';
+  const off  = 'background:var(--s3);color:var(--muted);border:1px solid var(--bd);';
+  document.getElementById('doc-tipo-recibo').style.cssText  = base + (esF ? off : on);
+  document.getElementById('doc-tipo-factura').style.cssText = base + (esF ? on : off);
+  document.getElementById('doc-tipo-factura').textContent   = d._facturaMotivo ? '📄 Factura 🔒' : '📄 Factura';
+  const nota = document.getElementById('doc-tipo-nota');
+  nota.textContent   = d._facturaMotivo || '';
+  nota.style.display = d._facturaMotivo ? 'block' : 'none';
+}
+
+function cambiarTipoDoc(tipo) {
+  if (!docPendiente || !docPendiente.registroId) return;
+  const c = getDocClienteActual();
+  docRegistro(docPendiente.registroId, tipo, { nombre: c.nombre, rtn: c.rtn, dir: c.dir, tel: document.getElementById('doc-tel').value.trim() });
+}
+
+/* ── Directorio de clientes guardados ── */
+function registrarNombreCliente(nombre) {
+  const n = (nombre || '').trim(); if (!n) return;
+  const m = _lsMap('cr_clientes_nombres'); m[n.toLowerCase()] = n; _lsSet('cr_clientes_nombres', m);
+}
+function listarClientes() {
+  const nombres = { ..._lsMap('cr_clientes_nombres') };
+  const add = n => { n = (n || '').trim(); if (n && !nombres[n.toLowerCase()]) nombres[n.toLowerCase()] = n; };
+  registros.forEach(r => { if (r.tipoContacto !== 'proveedor') add(r.cliente); });
+  creditos.forEach(c => { if (c.tipo === 'dado') add(c.nombre); });
+  ['cr_clientes_rtn', 'cr_clientes_dir', 'cr_telefonos'].forEach(k => Object.keys(_lsMap(k)).forEach(low => {
+    if (!nombres[low]) nombres[low] = low.replace(/\b\w/g, ch => ch.toUpperCase());
+  }));
+  return Object.values(nombres).sort((a, b) => a.localeCompare(b, 'es'));
+}
+function refrescarListaClientes() {
+  const dl = document.getElementById('lista-clientes'); if (!dl) return;
+  dl.innerHTML = listarClientes().map(n => '<option value="' + n.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '"></option>').join('');
+}
+function datosCliente(nombre) {
+  return { nombre, rtn: getClienteRTN(nombre), dir: getClienteDir(nombre), tel: getTelefono(nombre) };
+}
+function mostrarClienteInfo() {
+  const el = document.getElementById('reg-cliente-info'); if (!el) return;
+  const n = (document.getElementById('reg-cliente').value || '').trim();
+  if (!n || tipoContacto !== 'cliente') { el.style.display = 'none'; return; }
+  const d = datosCliente(n);
+  const partes = [d.rtn ? 'RTN ' + d.rtn : '', d.tel ? 'Tel ' + d.tel : '', d.dir].filter(Boolean);
+  el.style.display = 'block';
+  if (partes.length) { el.style.color = 'var(--green)'; el.textContent = '✓ Cliente guardado · ' + partes.join(' · '); }
+  else { el.style.color = 'var(--muted)'; el.textContent = 'Sin datos guardados. Use "Datos del cliente" para guardar RTN, teléfono y dirección.'; }
+}
+function abrirModalCliente() {
+  const n = (document.getElementById('reg-cliente').value || '').trim();
+  const d = datosCliente(n);
+  document.getElementById('mcli-nombre').value = n;
+  document.getElementById('mcli-rtn').value    = d.rtn;
+  document.getElementById('mcli-tel').value    = d.tel;
+  document.getElementById('mcli-dir').value    = d.dir;
+  refrescarListaClientes();
+  document.getElementById('modal-cliente').classList.add('open');
+}
+function cerrarModalCliente() { document.getElementById('modal-cliente').classList.remove('open'); }
+function cargarDatosClienteModal() {
+  const n = document.getElementById('mcli-nombre').value.trim(); if (!n) return;
+  const d = datosCliente(n);
+  document.getElementById('mcli-rtn').value = d.rtn;
+  document.getElementById('mcli-tel').value = d.tel;
+  document.getElementById('mcli-dir').value = d.dir;
+}
+function guardarClienteModal() {
+  const n = document.getElementById('mcli-nombre').value.trim();
+  if (!n) { toast('Escriba el nombre del cliente', 'err'); return; }
+  setClienteRTN(n, document.getElementById('mcli-rtn').value.trim());
+  setClienteDir(n, document.getElementById('mcli-dir').value.trim());
+  const tel = document.getElementById('mcli-tel').value.trim();
+  if (tel) setTelefono(n, tel);
+  registrarNombreCliente(n);
+  document.getElementById('reg-cliente').value = n;           // el movimiento queda asociado a este cliente
+  cerrarModalCliente(); refrescarListaClientes(); mostrarClienteInfo();
+  toast('Cliente guardado ✓');
+}
+function autocompletarClienteDoc() {
+  const n = document.getElementById('doc-cliente-nombre').value.trim(); if (!n) return;
+  const d = datosCliente(n);
+  if (d.rtn) document.getElementById('doc-cliente-rtn').value = d.rtn;
+  if (d.dir) document.getElementById('doc-cliente-dir').value = d.dir;
+  if (d.tel) document.getElementById('doc-tel').value         = d.tel;
 }
 
 /* Recordar RTN y dirección del cliente por nombre */
@@ -6069,6 +6226,7 @@ function getClienteRTN(nombre) {
 }
 function setClienteRTN(nombre, rtn) {
   if (!nombre) return;
+  registrarNombreCliente(nombre);
   try { const m = JSON.parse(localStorage.getItem('cr_clientes_rtn')||'{}'); m[nombre.toLowerCase()] = rtn; localStorage.setItem('cr_clientes_rtn', JSON.stringify(m)); } catch(e) {}
 }
 function getClienteDir(nombre) {
