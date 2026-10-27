@@ -6028,7 +6028,7 @@ function docAbono(creditoId, n) {            // n = número cronológico del abo
     render: doc => {
       let y = pdfEncabezado(doc, 'RECIBO DE ABONO', numDoc('ABO', a.id || (c.id + n)), a.fecha);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-      const txt = doc.splitTextToSize(`Recibimos de ${c.nombre} la cantidad de ${L(a.monto)} como abono No. ${n}${c.desc ? ' por concepto de: ' + c.desc : ' a su crédito'}.`, 180);
+      const txt = doc.splitTextToSize(`Recibimos de ${c.nombre} la cantidad de ${L(a.monto)} (${montoEnLetras(a.monto)}) como abono No. ${n}${c.desc ? ' por concepto de: ' + c.desc : ' a su crédito'}.`, 180);
       doc.text(txt, 15, y); y += txt.length * 6 + 6;
       y = pdfCampo(doc, y, 'Fecha:', a.fecha + (a.hora ? '  ' + a.hora : ''));
       y = pdfCampo(doc, y, 'Método de pago:', a.metodo || '-');
@@ -6062,7 +6062,7 @@ function docRegistro(id, tipoPedido, keep) {
   const mostrarProy = !!(proyAs && !usarFactura);
 
   abrirDoc({
-    titulo:  usarFactura ? 'Factura' : (esIn ? 'Recibo de ingreso' : 'Comprobante de egreso'),
+    titulo:  usarFactura ? 'Factura' : (esIn ? 'Recibo de pago' : 'Comprobante de egreso'),
     nombre:  r.cliente || '',
     archivo: (usarFactura ? 'Factura_' : esIn ? 'Recibo_' : 'Egreso_') +
              (r.fecha || '').replace(/\//g, '-') + '_' + corrNum.replace(/\//g,'-') + '.pdf',
@@ -6075,7 +6075,7 @@ function docRegistro(id, tipoPedido, keep) {
     registroId: r.id, _soportaFactura: esIn, _tipoDoc: tipoDoc,
     _facturaMotivo: (esIn && !disp.ok) ? (disp.motivo || '') : '', _keep: keep,
     render: doc => {
-      const titulo = usarFactura ? 'FACTURA' : (esIn ? 'RECIBO DE INGRESO' : 'COMPROBANTE DE EGRESO');
+      const titulo = usarFactura ? 'FACTURA' : (esIn ? 'RECIBO DE PAGO' : 'COMPROBANTE DE EGRESO');
       // El correlativo se asigna una sola vez por registro: reimprimir no gasta números nuevos
       const noFactura = usarFactura ? (getFacturaNo(r.id) || generarCorrelativo()) : corrNum;
       if (usarFactura && !getFacturaNo(r.id)) { setFacturaNo(r.id, noFactura); incrementarCorrelativo(); }
@@ -6107,6 +6107,11 @@ function docRegistro(id, tipoPedido, keep) {
       const rtnCli = (cli && cli.rtn)    || '';
       const dirCli = (cli && cli.dir)    || '';
 
+      if (esIn && !usarFactura) {              // frase de recibido con la cantidad en letras
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20);
+        const frase = doc.splitTextToSize('Recibimos' + (nomCli ? ' de ' + nomCli : '') + ' la cantidad de ' + L(monto) + ' (' + montoEnLetras(monto) + ')' + (r.desc ? ' por concepto de: ' + r.desc : '') + '.', 180);
+        doc.text(frase, 15, y); y += frase.length * 5.6 + 5;
+      }
       if (nomCli) y = pdfCampo(doc, y, r.tipoContacto === 'proveedor' ? 'Proveedor:' : (esIn ? 'Recibido de:' : 'Pagado a:'), nomCli);
       if (rtnCli) y = pdfCampo(doc, y, 'RTN cliente:', rtnCli);
       if (dirCli) y = pdfCampo(doc, y, 'Dirección:', dirCli);
@@ -6379,7 +6384,7 @@ function docAbonoProyecto(pid, recId) {
       const nom = (cli && cli.nombre) || p.cliente || '';
       let y = pdfEncabezado(doc, 'RECIBO DE ABONO - PROYECTO', numDoc('ABP', rec.id), rec.fecha);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
-      const txt = doc.splitTextToSize('Recibimos' + (nom ? ' de ' + nom : '') + ' la cantidad de ' + L(rec.monto) + ' como abono al proyecto "' + p.nombre + '".', 180);
+      const txt = doc.splitTextToSize('Recibimos' + (nom ? ' de ' + nom : '') + ' la cantidad de ' + L(rec.monto) + ' (' + montoEnLetras(rec.monto) + ') como abono al proyecto "' + p.nombre + '".', 180);
       doc.text(txt, 15, y); y += txt.length * 6 + 6;
       if (cli && cli.rtn) y = pdfCampo(doc, y, 'RTN cliente:', cli.rtn);
       if (cli && cli.dir) y = pdfCampo(doc, y, 'Dirección:', cli.dir);
@@ -6395,6 +6400,31 @@ function docAbonoProyecto(pid, recId) {
       pdfFirmas(doc, y, 'Recibido por', 'Cliente');
     }
   });
+}
+
+/* Cantidad en letras en lempiras: 2500 -> "DOS MIL QUINIENTOS LEMPIRAS CON 00/100" */
+function montoEnLetras(valor) {
+  const n = Math.round((Number(valor) || 0) * 100) / 100;
+  const ent = Math.floor(n + 1e-9), cent = Math.round((n - ent) * 100);
+  if (ent >= 1e9) return '';
+  const U = ['CERO','UNO','DOS','TRES','CUATRO','CINCO','SEIS','SIETE','OCHO','NUEVE','DIEZ','ONCE','DOCE','TRECE','CATORCE','QUINCE','DIECISÉIS','DIECISIETE','DIECIOCHO','DIECINUEVE','VEINTE','VEINTIUNO','VEINTIDÓS','VEINTITRÉS','VEINTICUATRO','VEINTICINCO','VEINTISÉIS','VEINTISIETE','VEINTIOCHO','VEINTINUEVE'];
+  const D = ['', '', '', 'TREINTA', 'CUARENTA', 'CINCUENTA', 'SESENTA', 'SETENTA', 'OCHENTA', 'NOVENTA'];
+  const C = ['', 'CIENTO', 'DOSCIENTOS', 'TRESCIENTOS', 'CUATROCIENTOS', 'QUINIENTOS', 'SEISCIENTOS', 'SETECIENTOS', 'OCHOCIENTOS', 'NOVECIENTOS'];
+  const m100  = x => x < 30 ? U[x] : D[Math.floor(x / 10)] + (x % 10 ? ' Y ' + U[x % 10] : '');
+  const m1000 = x => {
+    if (x === 100) return 'CIEN';
+    const c = Math.floor(x / 100), r = x % 100;
+    return (c ? C[c] + (r ? ' ' : '') : '') + (r ? m100(r) : '');
+  };
+  const apocope = s => s.replace(/UNO$/, 'UN');
+  const millones = Math.floor(ent / 1e6), miles = Math.floor((ent % 1e6) / 1000), resto = ent % 1000;
+  let t = '';
+  if (millones) t += (millones === 1 ? 'UN MILLÓN' : apocope(m1000(millones)) + ' MILLONES') + ' ';
+  if (miles)    t += (miles === 1 ? 'MIL' : apocope(m1000(miles)) + ' MIL') + ' ';
+  if (resto)    t += m1000(resto);
+  t = ent === 0 ? 'CERO' : apocope(t.trim());
+  const redondoMillon = millones && !miles && !resto;
+  return t + (redondoMillon ? ' DE' : '') + (ent === 1 ? ' LEMPIRA' : ' LEMPIRAS') + ' CON ' + String(cent).padStart(2, '0') + '/100';
 }
 
 function abrirDoc(d) {
