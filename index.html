@@ -1011,7 +1011,10 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
               style="margin:0;font-size:.77rem">
             <datalist id="lista-clientes"></datalist>
             <div id="reg-cliente-info" style="display:none;font-size:.6rem;line-height:1.35"></div>
-            <button type="button" onclick="abrirModalCliente()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:3px 6px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">👤 Datos del cliente</button>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <button type="button" onclick="abrirModalCliente()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:3px 6px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">👤 Datos del cliente</button>
+              <button type="button" onclick="nuevoProyectoParaCliente()" title="Crear un proyecto para este cliente" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:3px 6px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">➕ Proyecto</button>
+            </div>
           </div>
         </div>
         <div class="pi-row">
@@ -1901,6 +1904,15 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       </div>
       <div id="doc-tipo-nota" style="display:none;font-size:.62rem;color:var(--amber);margin-top:6px;line-height:1.4"></div>
     </div>
+    <!-- Proyecto asociado al pago -->
+    <div id="doc-proy-box" style="display:none;margin-bottom:9px">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px">📋 Proyecto asociado</div>
+      <div style="display:flex;gap:6px">
+        <select id="doc-proyecto" class="pi" style="margin:0;flex:1;font-size:.75rem" onchange="asociarProyectoDoc()"></select>
+        <button type="button" onclick="nuevoProyectoDesdeDoc()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:6px;padding:0 10px;font-size:.68rem;cursor:pointer;font-family:var(--font);font-weight:700;white-space:nowrap">➕ Nuevo</button>
+      </div>
+      <div id="doc-proy-nota" style="font-size:.62rem;color:var(--muted);margin-top:5px;line-height:1.4"></div>
+    </div>
     <!-- Datos del cliente para la factura/recibo -->
     <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:8px">
       <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:7px">📋 Datos del cliente (para el documento)</div>
@@ -1989,15 +2001,48 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="modal" style="max-width:420px;width:95%">
     <h3 style="margin-bottom:10px">👤 Datos del cliente</h3>
     <div style="display:flex;flex-direction:column;gap:7px">
-      <input type="text" id="mcli-nombre" class="pi" list="lista-clientes" autocomplete="off" onchange="cargarDatosClienteModal()" placeholder="Nombre del cliente (escriba o elija uno guardado)" style="margin:0">
+      <input type="text" id="mcli-nombre" class="pi" list="lista-clientes" autocomplete="off" oninput="actualizarResumenClienteModal()" onchange="cargarDatosClienteModal()" placeholder="Nombre del cliente (escriba o elija uno guardado)" style="margin:0">
       <input type="text" id="mcli-rtn" class="pi" placeholder="RTN del cliente (opcional)" style="margin:0">
       <input type="tel"  id="mcli-tel" class="pi" placeholder="WhatsApp / teléfono (opcional)" style="margin:0">
       <input type="text" id="mcli-dir" class="pi" placeholder="Dirección (opcional)" style="margin:0">
     </div>
+    <div id="mcli-resumen" style="font-size:.7rem;color:var(--text2);line-height:1.5;margin-top:8px"></div>
     <div style="font-size:.6rem;color:var(--dim);margin-top:7px;line-height:1.4">Se guardan en este dispositivo y se usan solos en los recibos y facturas de ese cliente.</div>
-    <div class="modal-btns" style="margin-top:12px">
+    <div class="modal-btns" style="margin-top:12px;flex-wrap:wrap;gap:6px">
       <button class="mbtn-cancel" onclick="cerrarModalCliente()">Cancelar</button>
+      <button class="mbtn-ok" style="background:var(--blue)" onclick="estadoCuentaClienteModal()">📄 Estado de cuenta</button>
       <button class="mbtn-ok" onclick="guardarClienteModal()">💾 Guardar cliente</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RECIBO DE ABONO DE PROYECTO -->
+<div class="overlay" id="modal-abono-proy" onclick="if(event.target===this)cerrarAbonoProyecto()">
+  <div class="modal" style="max-width:420px;width:95%">
+    <h3 style="margin-bottom:10px">💰 Recibo de abono del proyecto</h3>
+    <div id="mapy-info" style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px;font-size:.74rem;color:var(--text2);line-height:1.6;margin-bottom:9px"></div>
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;gap:6px">
+        <input type="date" id="mapy-fecha" class="pi" style="margin:0;flex:1">
+        <input type="number" id="mapy-monto" class="pi" placeholder="Monto del abono (Lps)" min="0.01" step="0.01" style="margin:0;flex:1" oninput="previewAbonoProyecto()">
+      </div>
+      <select id="mapy-metodo" class="pi" style="margin:0;font-size:.77rem">
+        <option value="Efectivo">💵 Efectivo</option>
+        <option value="Transferencia">🏦 Transferencia</option>
+        <option value="Tarjeta Débito">💳 Tarjeta Débito</option>
+        <option value="Depósito">🏧 Depósito</option>
+        <option value="Cheque">📄 Cheque</option>
+        <option value="Otro">🔹 Otro</option>
+      </select>
+      <label style="display:flex;align-items:flex-start;gap:7px;font-size:.7rem;color:var(--text2);line-height:1.4;cursor:pointer">
+        <input type="checkbox" id="mapy-sumar" checked onchange="previewAbonoProyecto()" style="margin-top:2px">
+        <span>Sumar este abono al campo <strong>Abono</strong> del proyecto.<br><span style="color:var(--muted)">Quite la marca si ya lo sumó usted en Editar proyecto, para no contarlo dos veces.</span></span>
+      </label>
+      <div id="mapy-preview" style="font-family:var(--mono);font-size:.76rem;color:var(--muted)"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:12px">
+      <button class="mbtn-cancel" onclick="cerrarAbonoProyecto()">Cancelar</button>
+      <button class="mbtn-ok" onclick="guardarAbonoProyecto()">🧾 Generar recibo</button>
     </div>
   </div>
 </div>
@@ -3051,6 +3096,7 @@ function calcProyModal() {
 }
 
 function abrirNuevoProyecto() {
+  window._selProyNuevo = false; window._asociarRegProy = '';
   document.getElementById('proy-edit-id').value    = '';
   document.getElementById('proy-nombre').value     = '';
   document.getElementById('proy-cliente-nom').value= '';
@@ -3133,6 +3179,16 @@ function guardarProyecto() {
   cerrarProyecto();
   renderProyectos();
   poblarSelectorProyectos();
+  if (!editId) {
+    if (window._selProyNuevo) { const s = document.getElementById('reg-proyecto-id'); if (s) { s.value = proy.id; toggleAdelantoSaldo(); } }
+    if (window._asociarRegProy) {
+      const rid = window._asociarRegProy; window._asociarRegProy = '';
+      const rr = registros.find(x => x.id == rid);
+      if (rr) { rr.proyectoId = proy.id; saveAll(); renderProyectos(); }
+      setTimeout(() => docRegistro(rid), 150);          // vuelve al recibo ya asociado al proyecto
+    }
+  }
+  window._selProyNuevo = false;
   toast(`Proyecto "${nombre}" guardado ✓`);
 }
 
@@ -3199,6 +3255,22 @@ function renderProyectos() {
     const pSaldo   = Math.max(0, pMonto - pAbono);
 
     const tieneFinanzas = pMonto > 0 || pAbono > 0;
+    const recsAb = getRecibosAbonoProy(p.id);
+    const recsHTML = recsAb.length ? `
+      <details style="margin-bottom:10px">
+        <summary style="cursor:pointer;font-size:.68rem;color:var(--blue);font-weight:700;list-style:none">▸ ${recsAb.length} recibo${recsAb.length > 1 ? 's' : ''} de abono emitido${recsAb.length > 1 ? 's' : ''}</summary>
+        <div style="margin-top:6px;display:flex;flex-direction:column;gap:3px">
+          ${[...recsAb].reverse().map(x => `
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--s3);border-radius:5px;padding:4px 9px;font-size:.68rem">
+            <span style="color:var(--text2)">${x.fecha}${x.hora ? ' ' + x.hora : ''}${x.metodo ? ' · ' + x.metodo : ''}</span>
+            <span style="display:flex;align-items:center;gap:6px">
+              <span style="font-family:var(--mono);color:var(--green);font-weight:700">L ${fmt(x.monto)}</span>
+              <button onclick="docAbonoProyecto('${p.id}',${x.id})" title="Ver o compartir este recibo" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:4px;padding:1px 6px;font-size:.6rem;cursor:pointer;font-family:var(--font)">🧾</button>
+              <button onclick="quitarReciboAbonoProy('${p.id}',${x.id})" title="Quitar de la lista (no cambia el abono)" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:4px;padding:1px 6px;font-size:.6rem;cursor:pointer;font-family:var(--font)">✕</button>
+            </span>
+          </div>`).join('')}
+        </div>
+      </details>` : '';
 
     return `
     <div style="background:var(--s2);border:1px solid var(--bd2);border-left:4px solid ${estadoColor[p.estado]||'var(--acc)'};
@@ -3217,7 +3289,8 @@ function renderProyectos() {
           </div>
           ${p.desc ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px;font-style:italic">${p.desc}</div>` : ''}
         </div>
-        <div style="display:flex;gap:5px;flex-shrink:0">
+        <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          <button onclick="abrirAbonoProyecto('${p.id}')" style="background:#2a2208;border:1px solid #5a4a10;color:#fbbf24;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">💰 Recibo de abono</button>
           <button onclick="docProyecto('${p.id}')" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 PDF</button>
           <button onclick="editarProyecto('${p.id}')" style="background:var(--blue-bg);border:1px solid var(--bd2);
             color:var(--blue);border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️ Editar</button>
@@ -3225,6 +3298,7 @@ function renderProyectos() {
             color:var(--red);border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
         </div>
       </div>
+      ${recsHTML}
       <!-- Finanzas del proyecto (si las tiene) -->
       ${tieneFinanzas ? `
       <div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:9px 11px;margin-bottom:10px">
@@ -5982,6 +6056,10 @@ function docRegistro(id, tipoPedido, keep) {
   const baseIsv  = monto / (1 + pctISV / 100);
   const montoIsv = monto - baseIsv;
   const corrNum  = usarFactura ? (getFacturaNo(r.id) || generarCorrelativo()) : numDoc(esIn ? 'REC' : 'EGR', r.id);
+  // Proyecto asociado (solo se muestra en recibos; la factura fiscal queda sin ese bloque)
+  const proyAs = esIn ? proyectoDeRegistro(r) : null;
+  const rsP = proyAs ? resumenProyecto(proyAs) : null;
+  const mostrarProy = !!(proyAs && !usarFactura);
 
   abrirDoc({
     titulo:  usarFactura ? 'Factura' : (esIn ? 'Recibo de ingreso' : 'Comprobante de egreso'),
@@ -5991,7 +6069,7 @@ function docRegistro(id, tipoPedido, keep) {
     resumen: `<strong>${r.desc || '(sin descripción)'}</strong><br>
               ${r.cliente ? r.cliente + ' · ' : ''}${r.fecha} ${r.hora || ''}<br>
               ${usarFactura ? `ISV ${pctISV}%: <strong>${L(montoIsv)}</strong> · ` : ''}
-              Total: <strong>${L(monto)}</strong>`,
+              Total: <strong>${L(monto)}</strong>${mostrarProy ? `<br>📋 Proyecto: ${escH(proyAs.nombre)}${rsP.monto > 0 ? ` · Saldo: <strong>${L(rsP.saldo)}</strong>` : ''}` : ''}`,
     texto: `Hola${r.cliente ? ' ' + r.cliente : ''}, le comparto su ${usarFactura ? 'factura' : esIn ? 'recibo' : 'comprobante'} de ${E.nombre}.\n${r.desc || ''}\nTotal: ${L(monto)} - Fecha: ${r.fecha}`,
     _esfactura: usarFactura,
     registroId: r.id, _soportaFactura: esIn, _tipoDoc: tipoDoc,
@@ -6038,6 +6116,7 @@ function docRegistro(id, tipoPedido, keep) {
       if (r.metodoPago)    y = pdfCampo(doc, y, 'Método de pago:', r.metodoPago);
       if (r.pagado)        y = pdfCampo(doc, y, 'Estado de pago:', r.pagado);
       if (r.observaciones) y = pdfCampo(doc, y, 'Observaciones:', r.observaciones);
+      if (mostrarProy) y = pdfCampo(doc, y, 'Proyecto:', proyAs.nombre);
       y += 6;
 
       // Totales — con ISV si es factura
@@ -6050,6 +6129,13 @@ function docRegistro(id, tipoPedido, keep) {
       } else {
         y = pdfTotales(doc, y, [{ t: 'TOTAL:', v: L(monto), destacar: true }]);
       }
+      if (mostrarProy && rsP.monto > 0) {      // estado del proyecto al momento de emitir el recibo
+        y = pdfTotales(doc, y + 4, [
+          { t: 'Monto del proyecto:', v: L(rsP.monto) },
+          { t: 'Pagado a la fecha:',  v: L(rsP.pagado) },
+          { t: 'SALDO DEL PROYECTO:', v: L(rsP.saldo), destacar: true }
+        ]);
+      }
       pdfFirmas(doc, y, esIn ? 'Recibido por' : 'Entregado por', esIn ? 'Cliente' : 'Recibido por');
 
     }
@@ -6059,13 +6145,14 @@ function docRegistro(id, tipoPedido, keep) {
 function docProyecto(id) {
   const p = proyectos.find(x => x.id == id); if (!p) return;
   const E = getEmpresa();
-  const regs = registros.filter(r => r.tipo === 'IN' && ((r.proyectoId || '').toLowerCase() === String(p.id).toLowerCase() || (r.proyectoId || '').toLowerCase() === (p.nombre || '').toLowerCase()));
-  const pMonto = p.monto || 0, pAbono = p.abono || 0, pSaldo = Math.max(0, pMonto - pAbono);
+  const rsP = resumenProyecto(p);
+  const regs = rsP.pagos;
+  const pMonto = rsP.monto, pAbono = rsP.pagado, pSaldo = rsP.saldo;
   abrirDoc({
     titulo: 'Estado de cuenta del proyecto',
     nombre: p.cliente || '',
     archivo: 'Proyecto_' + (p.nombre || 'proyecto').replace(/[^\w]+/g, '_') + '.pdf',
-    resumen: `<strong>${p.nombre}</strong>${p.cliente ? ' · ' + p.cliente : ''}<br>Monto: ${L(pMonto)} · Abonos: ${L(pAbono)}<br>Saldo por cobrar: <strong>${L(pSaldo)}</strong>`,
+    resumen: `<strong>${escH(p.nombre)}</strong>${p.cliente ? ' · ' + escH(p.cliente) : ''}<br>Monto: ${L(pMonto)} · Abonos: ${L(pAbono)}<br>Saldo por cobrar: <strong>${L(pSaldo)}</strong>`,
     texto: `Hola${p.cliente ? ' ' + p.cliente : ''}, le comparto el estado de cuenta del proyecto "${p.nombre}" de ${E.nombre}.\nMonto: ${L(pMonto)}\nAbonos: ${L(pAbono)}\nSaldo por cobrar: ${L(pSaldo)}`,
     render: doc => {
       let y = pdfEncabezado(doc, 'ESTADO DE CUENTA - PROYECTO', numDoc('PRO', p.id), fechaHN(new Date()));
@@ -6076,9 +6163,11 @@ function docProyecto(id) {
       if (p.estado)      y = pdfCampo(doc, y, 'Estado:', String(p.estado).toUpperCase());
       if (p.desc)        y = pdfCampo(doc, y, 'Descripción:', p.desc);
       y += 4;
-      if (regs.length) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20); doc.text('Pagos registrados', 15, y); y += 7;
-        y = pdfTabla(doc, y, [{ t: 'Fecha', w: 32 }, { t: 'Descripción', w: 108 }, { t: 'Monto', w: 40, a: 'right' }], regs.map(r => [r.fecha, r.desc || '', L(r.bruto || r.neto)]));
+      if (regs.length || rsP.abonoInicial > 0) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20); doc.text('Abonos y pagos registrados', 15, y); y += 7;
+        const filas = (rsP.abonoInicial > 0 ? [['-', 'Abonos registrados en el proyecto', L(rsP.abonoInicial)]] : [])
+          .concat(regs.map(r => [r.fecha, r.desc || '', L(r.bruto || r.neto)]));
+        y = pdfTabla(doc, y, [{ t: 'Fecha', w: 32 }, { t: 'Descripción', w: 108 }, { t: 'Monto', w: 40, a: 'right' }], filas);
       }
       y = pdfTotales(doc, y + 2, [{ t: 'Monto del proyecto:', v: L(pMonto) }, { t: 'Total abonado:', v: L(pAbono) }, { t: 'SALDO POR COBRAR:', v: L(pSaldo), destacar: true }]);
       pdfFirmas(doc, y, 'Entregado por', 'Cliente');
@@ -6087,6 +6176,227 @@ function docProyecto(id) {
 }
 
 /* ── Ventana de acciones: descargar o compartir ── */
+/* ── Proyectos y estado de cuenta del cliente ── */
+const escH = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const _mismoNombre = (a, b) => (a || '').trim().toLowerCase() === (b || '').trim().toLowerCase();
+function proyectosDeCliente(nombre) { const n = (nombre || '').trim(); return n ? proyectos.filter(p => _mismoNombre(p.cliente, n)) : []; }
+function creditosDeCliente(nombre)  { const n = (nombre || '').trim(); return n ? creditos.filter(c => c.tipo === 'dado' && _mismoNombre(c.nombre, n)) : []; }
+function proyectoDeRegistro(r) {
+  const pid = String(r.proyectoId || '').toLowerCase(); if (!pid) return null;
+  return proyectos.find(p => String(p.id).toLowerCase() === pid || (p.nombre || '').toLowerCase() === pid) || null;
+}
+function pagosDeProyecto(p) {
+  const id = String(p.id).toLowerCase(), nom = (p.nombre || '').toLowerCase();
+  return registros.filter(r => {
+    if (r.tipo !== 'IN' || (r.tipoMov !== 'adelanto' && r.tipoMov !== 'saldo')) return false;   // los movimientos normales no suman al proyecto
+    const pid = String(r.proyectoId || '').toLowerCase();
+    return pid && (pid === id || pid === nom);
+  });
+}
+/* Abonos = campo Abono del proyecto (se lleva en Proyectos) + movimientos de Cajas marcados como Adelanto o Pago de saldo y vinculados a ese proyecto */
+function resumenProyecto(p) {
+  const pagos = pagosDeProyecto(p);
+  const monto = p.monto || 0, abonoInicial = p.abono || 0;
+  const pagadoReg = pagos.reduce((a, r) => a + (r.bruto || r.neto || 0), 0);
+  const pagado = abonoInicial + pagadoReg;
+  return { monto, abonoInicial, pagos, pagadoReg, pagado, saldo: Math.max(0, monto - pagado) };
+}
+
+function actualizarSelectorProyectoDoc(d) {
+  const box = document.getElementById('doc-proy-box'); if (!box) return;
+  const r = d.registroId ? registros.find(x => x.id == d.registroId) : null;
+  if (!r || r.tipo !== 'IN') { box.style.display = 'none'; return; }
+  const sel = document.getElementById('doc-proyecto');
+  const nombreCli = (document.getElementById('doc-cliente-nombre').value || r.cliente || '').trim();
+  const delCli = proyectosDeCliente(nombreCli);
+  const otros  = proyectos.filter(p => !delCli.includes(p));
+  const op = p => '<option value="' + escH(p.id) + '">' + escH(p.nombre) + (p.cliente ? ' · ' + escH(p.cliente) : '') + '</option>';
+  sel.innerHTML = '<option value="">— Sin proyecto —</option>'
+    + (delCli.length ? '<optgroup label="Proyectos de este cliente">' + delCli.map(op).join('') + '</optgroup>' : '')
+    + (otros.length  ? '<optgroup label="Otros proyectos">' + otros.map(op).join('') + '</optgroup>' : '');
+  const actual = proyectoDeRegistro(r);
+  sel.value = actual ? actual.id : '';
+  const nota = document.getElementById('doc-proy-nota');
+  if (actual) {
+    const rs = resumenProyecto(actual);
+    let t = rs.monto > 0 ? 'Monto L ' + fmt(rs.monto) + ' · Abonado L ' + fmt(rs.pagado) + ' · Saldo L ' + fmt(rs.saldo)
+                         : 'Este pago queda vinculado al proyecto "' + actual.nombre + '".';
+    if (r.tipoMov !== 'adelanto' && r.tipoMov !== 'saldo') t += ' · Este pago solo queda vinculado: los abonos del proyecto se llevan en Proyectos.';
+    nota.textContent = t;
+  } else if (delCli.length) {
+    nota.textContent = 'Este cliente tiene ' + delCli.length + ' proyecto' + (delCli.length > 1 ? 's' : '') + ': elija a cuál pertenece este pago.';
+  } else {
+    nota.textContent = 'Puede asociar este pago a un proyecto existente o crear uno nuevo con "➕ Nuevo".';
+  }
+  box.style.display = 'block';
+}
+function asociarProyectoDoc() {
+  if (!docPendiente || !docPendiente.registroId) return;
+  const r = registros.find(x => x.id == docPendiente.registroId); if (!r) return;
+  r.proyectoId = document.getElementById('doc-proyecto').value || '';
+  saveAll(); renderProyectos();
+  const p = proyectoDeRegistro(r);
+  toast(p ? 'Pago asociado al proyecto "' + p.nombre + '" ✓' : 'Pago sin proyecto');
+  const c = getDocClienteActual();
+  docRegistro(docPendiente.registroId, docPendiente._tipoDoc, { nombre: c.nombre, rtn: c.rtn, dir: c.dir, tel: document.getElementById('doc-tel').value.trim() });
+}
+function nuevoProyectoDesdeDoc() {
+  if (!docPendiente || !docPendiente.registroId) return;
+  const c = getDocClienteActual(), rid = docPendiente.registroId;
+  cerrarDoc(); abrirNuevoProyecto();
+  document.getElementById('proy-cliente-nom').value = c.nombre || '';
+  window._asociarRegProy = rid;
+}
+function nuevoProyectoParaCliente() {
+  const n = (document.getElementById('reg-cliente').value || '').trim();
+  abrirNuevoProyecto();
+  document.getElementById('proy-cliente-nom').value = n;
+  window._selProyNuevo = true;
+}
+
+function actualizarResumenClienteModal() {
+  const el = document.getElementById('mcli-resumen'); if (!el) return;
+  const n = document.getElementById('mcli-nombre').value.trim();
+  if (!n) { el.textContent = ''; return; }
+  const proys = proyectosDeCliente(n), creds = creditosDeCliente(n);
+  const sP = proys.reduce((a, p) => a + resumenProyecto(p).saldo, 0), sC = creds.reduce((a, c) => a + (c.saldo || 0), 0);
+  const l = [];
+  if (proys.length) l.push('📋 ' + proys.length + ' proyecto' + (proys.length > 1 ? 's' : '') + ' · saldo L ' + fmt(sP));
+  if (creds.length) l.push('💳 ' + creds.length + ' crédito' + (creds.length > 1 ? 's' : '') + ' · saldo L ' + fmt(sC));
+  el.textContent = l.length ? l.join('    ') : 'Sin proyectos ni créditos registrados para este cliente.';
+}
+
+function docCliente(nombreIn) {
+  const nombre = (nombreIn || '').trim();
+  if (!nombre) { toast('Escriba o elija un cliente', 'err'); return; }
+  const E = getEmpresa();
+  const proys = proyectosDeCliente(nombre), creds = creditosDeCliente(nombre);
+  if (!proys.length && !creds.length) { toast('Este cliente no tiene proyectos ni créditos registrados', 'warn'); return; }
+  const rs = proys.map(p => ({ p, s: resumenProyecto(p) }));
+  const saldoP = rs.reduce((a, x) => a + x.s.saldo, 0), saldoC = creds.reduce((a, c) => a + (c.saldo || 0), 0);
+  abrirDoc({
+    titulo: 'Estado de cuenta del cliente',
+    nombre,
+    archivo: 'EstadoCuenta_' + nombre.replace(/[^\w]+/g, '_') + '.pdf',
+    resumen: '<strong>' + escH(nombre) + '</strong><br>📋 ' + proys.length + ' proyecto(s) · saldo ' + L(saldoP) + '<br>💳 ' + creds.length + ' crédito(s) · saldo ' + L(saldoC) + '<br>Saldo total pendiente: <strong>' + L(saldoP + saldoC) + '</strong>',
+    texto: 'Hola ' + nombre + ', le comparto su estado de cuenta de ' + E.nombre + '.\nProyectos: ' + L(saldoP) + '\nCréditos: ' + L(saldoC) + '\nSaldo total pendiente: ' + L(saldoP + saldoC),
+    render: doc => {
+      const cli = docPendiente && docPendiente._clienteDoc;
+      let y = pdfEncabezado(doc, 'ESTADO DE CUENTA - CLIENTE', numDoc('EDC', Date.now()), fechaHN(new Date()));
+      y = pdfCampo(doc, y, 'Cliente:', (cli && cli.nombre) || nombre);
+      if (cli && cli.rtn) y = pdfCampo(doc, y, 'RTN cliente:', cli.rtn);
+      if (cli && cli.dir) y = pdfCampo(doc, y, 'Dirección:', cli.dir);
+      y += 4;
+      const titulo = t => { if (y > 255) { doc.addPage(); y = 20; } doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(20, 20, 20); doc.text(t, 15, y); y += 7; };
+      if (rs.length) {
+        titulo('Proyectos');
+        y = pdfTabla(doc, y, [{ t: 'Proyecto', w: 80 }, { t: 'Monto', w: 33, a: 'right' }, { t: 'Abonado', w: 33, a: 'right' }, { t: 'Saldo', w: 34, a: 'right' }],
+          rs.map(x => [x.p.nombre, L(x.s.monto), L(x.s.pagado), L(x.s.saldo)]));
+      }
+      if (creds.length) {
+        titulo('Créditos');
+        y = pdfTabla(doc, y, [{ t: 'Fecha', w: 26 }, { t: 'Concepto', w: 64 }, { t: 'Monto', w: 30, a: 'right' }, { t: 'Abonado', w: 30, a: 'right' }, { t: 'Saldo', w: 30, a: 'right' }],
+          creds.map(c => [c.fecha, c.desc || 'Crédito', L(c.monto), L(c.abonado), L(c.saldo)]));
+      }
+      pdfTotales(doc, y + 2, [{ t: 'Saldo en proyectos:', v: L(saldoP) }, { t: 'Saldo en créditos:', v: L(saldoC) }, { t: 'SALDO TOTAL PENDIENTE:', v: L(saldoP + saldoC), destacar: true }]);
+    }
+  });
+}
+
+/* ── Recibos de abono de proyecto (los abonos se llevan en Proyectos) ── */
+function getRecibosAbonoProy(pid) { return _lsMap('cr_recibos_abono_proy')[String(pid)] || []; }
+function setRecibosAbonoProy(pid, arr) { const m = _lsMap('cr_recibos_abono_proy'); m[String(pid)] = arr; _lsSet('cr_recibos_abono_proy', m); }
+let _abonoProyId = '';
+
+function abrirAbonoProyecto(id) {
+  const p = proyectos.find(x => x.id == id); if (!p) return;
+  _abonoProyId = p.id;
+  const rs = resumenProyecto(p);
+  document.getElementById('mapy-info').innerHTML = '<strong>' + escH(p.nombre) + '</strong>' + (p.cliente ? ' · ' + escH(p.cliente) : '')
+    + (rs.monto > 0 ? '<br>Monto: ' + L(rs.monto) + ' · Abonado: ' + L(rs.pagado) + ' · Saldo: <strong>' + L(rs.saldo) + '</strong>' : '<br>Este proyecto no tiene monto total escrito.');
+  document.getElementById('mapy-fecha').value  = hoyKey();
+  document.getElementById('mapy-monto').value  = '';
+  document.getElementById('mapy-metodo').value = 'Efectivo';
+  document.getElementById('mapy-sumar').checked = true;
+  previewAbonoProyecto();
+  document.getElementById('modal-abono-proy').classList.add('open');
+}
+function cerrarAbonoProyecto() { document.getElementById('modal-abono-proy').classList.remove('open'); }
+function previewAbonoProyecto() {
+  const p = proyectos.find(x => x.id == _abonoProyId); const el = document.getElementById('mapy-preview'); if (!p || !el) return;
+  const monto = parseFloat(document.getElementById('mapy-monto').value) || 0;
+  const sumar = document.getElementById('mapy-sumar').checked;
+  const rs = resumenProyecto(p);
+  if (monto <= 0 || rs.monto <= 0) { el.textContent = ''; return; }
+  el.textContent = sumar ? 'Saldo después del abono: ' + L(Math.max(0, rs.saldo - monto))
+                         : 'El saldo actual (' + L(rs.saldo) + ') ya incluye este abono.';
+}
+function guardarAbonoProyecto() {
+  const p = proyectos.find(x => x.id == _abonoProyId); if (!p) return;
+  const monto = parseFloat(document.getElementById('mapy-monto').value) || 0;
+  if (monto <= 0) { toast('Escriba el monto del abono', 'err'); return; }
+  const fechaVal  = document.getElementById('mapy-fecha').value || hoyKey();
+  const fechaDisp = new Date(fechaVal + 'T12:00:00').toLocaleDateString('es-HN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const sumar  = document.getElementById('mapy-sumar').checked;
+  const metodo = document.getElementById('mapy-metodo').value || 'Efectivo';
+  const rs = resumenProyecto(p);
+  let antes, despues;
+  if (sumar) {
+    antes = rs.saldo;
+    p.abono = (p.abono || 0) + monto;
+    p.saldo = Math.max(0, (p.monto || 0) - p.abono);
+    despues = resumenProyecto(p).saldo;
+  } else {
+    despues = rs.saldo;
+    antes = rs.saldo + monto;
+  }
+  const rec = { id: Date.now(), fecha: fechaDisp, fechaKey: fechaVal, hora: horaHN(new Date()), monto, metodo, antes, despues, sumado: sumar };
+  const arr = getRecibosAbonoProy(p.id); arr.push(rec); setRecibosAbonoProy(p.id, arr);
+  if (sumar) { saveAll(); enviarProyectoAGAS(p, 'guardar'); }
+  cerrarAbonoProyecto(); renderProyectos();
+  toast(sumar ? 'Abono de L ' + fmt(monto) + ' sumado al proyecto ✓' : 'Recibo creado ✓');
+  docAbonoProyecto(p.id, rec.id);
+}
+function quitarReciboAbonoProy(pid, recId) {
+  if (!confirm('¿Quitar este recibo de la lista?\n\nEsto NO cambia el abono del proyecto.')) return;
+  setRecibosAbonoProy(pid, getRecibosAbonoProy(pid).filter(x => x.id != recId));
+  renderProyectos();
+}
+function docAbonoProyecto(pid, recId) {
+  const p = proyectos.find(x => x.id == pid); if (!p) return;
+  const lista = getRecibosAbonoProy(pid);
+  const rec = lista.find(x => x.id == recId); if (!rec) return;
+  const E = getEmpresa();
+  const conSaldo = (p.monto || 0) > 0;
+  abrirDoc({
+    titulo: 'Recibo de abono - proyecto',
+    nombre: p.cliente || '',
+    archivo: 'ReciboAbono_' + (p.nombre || 'proyecto').replace(/[^\w]+/g, '_') + '_' + String(rec.fecha).replace(/\//g, '-') + '.pdf',
+    resumen: '<strong>' + escH(p.nombre) + '</strong>' + (p.cliente ? ' · ' + escH(p.cliente) : '') + '<br>Abono: <strong>' + L(rec.monto) + '</strong> · ' + rec.fecha + (conSaldo ? '<br>Saldo después: ' + L(rec.despues) : ''),
+    texto: 'Hola' + (p.cliente ? ' ' + p.cliente : '') + ', le comparto el recibo de su abono de ' + L(rec.monto) + ' (' + rec.fecha + ') al proyecto "' + p.nombre + '" de ' + E.nombre + '.' + (conSaldo ? '\nSaldo pendiente: ' + L(rec.despues) : ''),
+    render: doc => {
+      const cli = docPendiente && docPendiente._clienteDoc;
+      const nom = (cli && cli.nombre) || p.cliente || '';
+      let y = pdfEncabezado(doc, 'RECIBO DE ABONO - PROYECTO', numDoc('ABP', rec.id), rec.fecha);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(11); doc.setTextColor(20, 20, 20);
+      const txt = doc.splitTextToSize('Recibimos' + (nom ? ' de ' + nom : '') + ' la cantidad de ' + L(rec.monto) + ' como abono al proyecto "' + p.nombre + '".', 180);
+      doc.text(txt, 15, y); y += txt.length * 6 + 6;
+      if (cli && cli.rtn) y = pdfCampo(doc, y, 'RTN cliente:', cli.rtn);
+      if (cli && cli.dir) y = pdfCampo(doc, y, 'Dirección:', cli.dir);
+      y = pdfCampo(doc, y, 'Proyecto:', p.nombre);
+      y = pdfCampo(doc, y, 'Fecha y hora:', rec.fecha + (rec.hora ? '  ' + rec.hora : ''));
+      y = pdfCampo(doc, y, 'Método de pago:', rec.metodo || '-');
+      y += 6;
+      if (conSaldo) {
+        y = pdfTotales(doc, y, [{ t: 'Monto del proyecto:', v: L(p.monto) }, { t: 'Saldo anterior:', v: L(rec.antes) }, { t: 'Este abono:', v: L(rec.monto) }, { t: 'SALDO ACTUAL:', v: L(rec.despues), destacar: true }]);
+      } else {
+        y = pdfTotales(doc, y, [{ t: 'ABONO RECIBIDO:', v: L(rec.monto), destacar: true }]);
+      }
+      pdfFirmas(doc, y, 'Recibido por', 'Cliente');
+    }
+  });
+}
+
 function abrirDoc(d) {
   docPendiente = d;
   document.getElementById('doc-titulo').textContent        = d.titulo;
@@ -6103,6 +6413,7 @@ function abrirDoc(d) {
   }
   actualizarSelectorTipoDoc(d);
   refrescarListaClientes();
+  actualizarSelectorProyectoDoc(d);
   document.getElementById('modal-doc').classList.add('open');
   cargarJsPDF().catch(() => {});
 }
@@ -6160,6 +6471,7 @@ function listarClientes() {
   const add = n => { n = (n || '').trim(); if (n && !nombres[n.toLowerCase()]) nombres[n.toLowerCase()] = n; };
   registros.forEach(r => { if (r.tipoContacto !== 'proveedor') add(r.cliente); });
   creditos.forEach(c => { if (c.tipo === 'dado') add(c.nombre); });
+  proyectos.forEach(p => add(p.cliente));
   ['cr_clientes_rtn', 'cr_clientes_dir', 'cr_telefonos'].forEach(k => Object.keys(_lsMap(k)).forEach(low => {
     if (!nombres[low]) nombres[low] = low.replace(/\b\w/g, ch => ch.toUpperCase());
   }));
@@ -6173,13 +6485,26 @@ function datosCliente(nombre) {
   return { nombre, rtn: getClienteRTN(nombre), dir: getClienteDir(nombre), tel: getTelefono(nombre) };
 }
 function mostrarClienteInfo() {
-  const el = document.getElementById('reg-cliente-info'); if (!el) return;
-  const n = (document.getElementById('reg-cliente').value || '').trim();
+  const el  = document.getElementById('reg-cliente-info'); if (!el) return;
+  const sel = document.getElementById('reg-proyecto-id');
+  const n   = (document.getElementById('reg-cliente').value || '').trim();
   if (!n || tipoContacto !== 'cliente') { el.style.display = 'none'; return; }
   const d = datosCliente(n);
   const partes = [d.rtn ? 'RTN ' + d.rtn : '', d.tel ? 'Tel ' + d.tel : '', d.dir].filter(Boolean);
+  const proys = proyectosDeCliente(n);
+  let txtProy = '';
+  if (proys.length) {
+    const saldo = proys.reduce((a, p) => a + resumenProyecto(p).saldo, 0);
+    txtProy = '📋 ' + proys.length + ' proyecto' + (proys.length > 1 ? 's' : '') + (saldo > 0 ? ' · saldo L ' + fmt(saldo) : '');
+    const pa = (sel && sel.value) ? proyectos.find(p => p.id === sel.value) : null;
+    if (pa) txtProy += ' · asociado a "' + pa.nombre + '"';
+    else txtProy += ' · si este movimiento es del proyecto, elíjalo en la lista';   // nunca se asocia solo
+  }
   el.style.display = 'block';
-  if (partes.length) { el.style.color = 'var(--green)'; el.textContent = '✓ Cliente guardado · ' + partes.join(' · '); }
+  const bloques = [];
+  if (partes.length) bloques.push('✓ Cliente guardado · ' + partes.join(' · '));
+  if (txtProy) bloques.push(txtProy);
+  if (bloques.length) { el.style.color = 'var(--green)'; el.textContent = bloques.join('  |  '); }
   else { el.style.color = 'var(--muted)'; el.textContent = 'Sin datos guardados. Use "Datos del cliente" para guardar RTN, teléfono y dirección.'; }
 }
 function abrirModalCliente() {
@@ -6190,6 +6515,7 @@ function abrirModalCliente() {
   document.getElementById('mcli-tel').value    = d.tel;
   document.getElementById('mcli-dir').value    = d.dir;
   refrescarListaClientes();
+  actualizarResumenClienteModal();
   document.getElementById('modal-cliente').classList.add('open');
 }
 function cerrarModalCliente() { document.getElementById('modal-cliente').classList.remove('open'); }
@@ -6199,18 +6525,28 @@ function cargarDatosClienteModal() {
   document.getElementById('mcli-rtn').value = d.rtn;
   document.getElementById('mcli-tel').value = d.tel;
   document.getElementById('mcli-dir').value = d.dir;
+  actualizarResumenClienteModal();
 }
-function guardarClienteModal() {
+function _guardarClienteCampos() {
   const n = document.getElementById('mcli-nombre').value.trim();
-  if (!n) { toast('Escriba el nombre del cliente', 'err'); return; }
+  if (!n) { toast('Escriba el nombre del cliente', 'err'); return ''; }
   setClienteRTN(n, document.getElementById('mcli-rtn').value.trim());
   setClienteDir(n, document.getElementById('mcli-dir').value.trim());
   const tel = document.getElementById('mcli-tel').value.trim();
   if (tel) setTelefono(n, tel);
   registrarNombreCliente(n);
   document.getElementById('reg-cliente').value = n;           // el movimiento queda asociado a este cliente
+  return n;
+}
+function guardarClienteModal() {
+  const n = _guardarClienteCampos(); if (!n) return;
   cerrarModalCliente(); refrescarListaClientes(); mostrarClienteInfo();
   toast('Cliente guardado ✓');
+}
+function estadoCuentaClienteModal() {
+  const n = _guardarClienteCampos(); if (!n) return;
+  cerrarModalCliente(); refrescarListaClientes(); mostrarClienteInfo();
+  docCliente(n);
 }
 function autocompletarClienteDoc() {
   const n = document.getElementById('doc-cliente-nombre').value.trim(); if (!n) return;
