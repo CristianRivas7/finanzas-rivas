@@ -1924,6 +1924,9 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     </div>
     <input type="tel" id="doc-tel" class="pi" placeholder="WhatsApp del cliente (opcional, ej. 9999-9999)" style="margin:0 0 4px 0">
     <div style="font-size:.6rem;color:var(--dim);margin-bottom:10px">En el celular se abre directo WhatsApp con el PDF adjunto. En computadora se descarga el PDF y se abre el chat.</div>
+    <label id="doc-firma-box" style="display:none;align-items:center;gap:7px;font-size:.72rem;color:var(--text2);margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="doc-con-firma" checked> ✍️ Incluir firma y sello en este documento
+    </label>
     <div class="modal-btns" style="flex-wrap:wrap;gap:6px">
       <button class="mbtn-cancel" onclick="cerrarDoc()">Cerrar</button>
       <button class="mbtn-ok" style="background:var(--blue)" onclick="descargarDoc()">📥 Descargar PDF</button>
@@ -1989,6 +1992,33 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       </div>
     </div>
 
+    <!-- Firma y sello digital -->
+    <div style="margin-top:12px;border-top:1px solid var(--bd);padding-top:10px">
+      <div style="font-size:.62rem;color:var(--acc);font-weight:800;text-transform:uppercase;letter-spacing:.04em;margin-bottom:7px">✍️ Firma y sello digital</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Firma</div>
+          <div id="firma-prev" style="height:56px;border:1px dashed var(--bd2);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden"></div>
+          <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">
+            <button type="button" onclick="abrirPadFirma()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 7px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">✍️ Dibujar</button>
+            <button type="button" onclick="document.getElementById('firma-file').click()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 7px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">📷 Subir foto</button>
+            <button type="button" onclick="quitarFirmaImg('firma')" title="Quitar firma" style="background:var(--red-bg);color:var(--red);border:1px solid #3d0a0a;border-radius:5px;padding:4px 7px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">✕</button>
+          </div>
+        </div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Sello</div>
+          <div id="sello-prev" style="height:56px;border:1px dashed var(--bd2);border-radius:6px;display:flex;align-items:center;justify-content:center;background:#fff;overflow:hidden"></div>
+          <div style="display:flex;gap:4px;margin-top:5px;flex-wrap:wrap">
+            <button type="button" onclick="document.getElementById('sello-file').click()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 7px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">📷 Subir foto</button>
+            <button type="button" onclick="quitarFirmaImg('sello')" title="Quitar sello" style="background:var(--red-bg);color:var(--red);border:1px solid #3d0a0a;border-radius:5px;padding:4px 7px;font-size:.62rem;cursor:pointer;font-family:var(--font);font-weight:700">✕</button>
+          </div>
+        </div>
+      </div>
+      <input type="file" id="firma-file" accept="image/*" style="display:none" onchange="procesarImagenFirma(this.files[0],'firma');this.value=''">
+      <input type="file" id="sello-file" accept="image/*" style="display:none" onchange="procesarImagenFirma(this.files[0],'sello');this.value=''">
+      <div style="font-size:.6rem;color:var(--dim);margin-top:6px;line-height:1.45">Para la foto: firme o selle en papel blanco, con buena luz y de frente. El fondo blanco se quita solo. Se guarda únicamente en este dispositivo.</div>
+    </div>
+
     <div class="modal-btns">
       <button class="mbtn-cancel" onclick="cerrarModalEmpresa()">Cancelar</button>
       <button class="mbtn-ok" onclick="guardarEmpresa()">💾 Guardar</button>
@@ -2047,16 +2077,51 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   </div>
 </div>
 
+<!-- MODAL DIBUJAR FIRMA -->
+<div class="overlay" id="modal-firma-pad" onclick="if(event.target===this)cerrarPadFirma()">
+  <div class="modal" style="max-width:460px;width:96%">
+    <h3 style="margin-bottom:8px">✍️ Dibuje su firma</h3>
+    <div style="background:#fff;border-radius:8px;border:1px solid var(--bd2)">
+      <canvas id="firma-canvas" width="600" height="240" style="width:100%;height:auto;display:block;touch-action:none;cursor:crosshair"></canvas>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;margin:8px 0 4px;flex-wrap:wrap">
+      <span style="font-size:.62rem;color:var(--muted)">Tinta:</span>
+      <button type="button" onclick="_padColor='#0a1f5c'" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer;font-family:var(--font);font-weight:700">🔵 Azul</button>
+      <button type="button" onclick="_padColor='#111111'" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer;font-family:var(--font);font-weight:700">⚫ Negro</button>
+      <button type="button" onclick="limpiarPadFirma()" style="background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer;font-family:var(--font);font-weight:700">🧹 Borrar</button>
+    </div>
+    <div style="font-size:.6rem;color:var(--dim)">Firme dentro del recuadro con el dedo o el mouse.</div>
+    <div class="modal-btns" style="margin-top:10px">
+      <button class="mbtn-cancel" onclick="cerrarPadFirma()">Cancelar</button>
+      <button class="mbtn-ok" onclick="usarFirmaDibujada()">✅ Usar esta firma</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL EDITAR REGISTRO -->
 <div class="overlay" id="modal-editar" onclick="if(event.target===this)cerrarEditar()">
   <div class="modal" style="max-width:460px;width:95%">
     <h3 style="color:var(--blue);margin-bottom:12px">✏️ Editar Registro</h3>
     <input type="hidden" id="edit-id">
     <div style="display:flex;flex-direction:column;gap:7px">
+      <div>
+        <div style="font-size:.58rem;color:var(--muted);margin-bottom:3px">Tipo de movimiento (si se equivocó, cámbielo aquí)</div>
+        <select id="edit-tipo" class="pi" style="margin:0;width:100%;font-size:.8rem;font-weight:700" onchange="actualizarAvisoCambioTipo()">
+          <option value="IN">▲ Ingreso</option>
+          <option value="OUT">▼ Egreso</option>
+        </select>
+        <div id="edit-tipo-aviso" style="display:none;margin-top:6px;background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:8px 10px;font-size:.68rem;color:var(--amber);line-height:1.5">
+          <div id="edit-tipo-nota"></div>
+          <label id="edit-ajuste-box" style="display:flex;align-items:flex-start;gap:7px;margin-top:6px;cursor:pointer;color:var(--text2)">
+            <input type="checkbox" id="edit-ajustar-saldo" checked style="margin-top:2px">
+            <span id="edit-ajuste-txt"></span>
+          </label>
+        </div>
+      </div>
       <input type="text"   id="edit-desc"     class="pi" placeholder="Descripción" style="margin:0">
       <div style="display:flex;gap:6px">
         <input type="date"   id="edit-fecha"    class="pi" style="margin:0;flex:1">
-        <input type="number" id="edit-monto"    class="pi" placeholder="Monto" style="margin:0;flex:1">
+        <input type="number" id="edit-monto"    class="pi" placeholder="Monto" style="margin:0;flex:1" oninput="actualizarAvisoCambioTipo()">
       </div>
       <div style="display:flex;gap:6px">
         <input type="number" id="edit-costo"    class="pi" placeholder="Costo repuesto" style="margin:0;flex:1">
@@ -3387,11 +3452,43 @@ function editarRegistro(id) {
   document.getElementById('edit-diezmo').value    = r.diezmo      || '';
   document.getElementById('edit-ofrenda').value   = r.ofrenda     || '';
   document.getElementById('edit-obs').value       = r.observaciones || '';
+  document.getElementById('edit-tipo').value      = r.tipo === 'OUT' ? 'OUT' : 'IN';
+  actualizarAvisoCambioTipo();
   document.getElementById('modal-editar').classList.add('open');
 }
 
 function cerrarEditar() {
   document.getElementById('modal-editar').classList.remove('open');
+}
+
+/* ── Cambiar un registro de Ingreso a Egreso (o al revés) ── */
+function netoPorTipo(r, tipoNuevo, bruto) {
+  // Igual que al guardar: el ingreso descuenta la comisión de la cuenta; el egreso no
+  return (tipoNuevo === 'IN' && (r.comision || 0) > 0) ? bruto - bruto * r.comision / 100 : bruto;
+}
+function efectoEnCuenta(tipo, neto) { return (tipo === 'IN' ? 1 : -1) * (neto || 0); }
+function actualizarAvisoCambioTipo() {
+  const aviso = document.getElementById('edit-tipo-aviso'); if (!aviso) return;
+  const r = registros.find(x => String(x.id) === String(document.getElementById('edit-id').value));
+  const nuevo = document.getElementById('edit-tipo').value;
+  if (!r || nuevo === r.tipo) { aviso.style.display = 'none'; return; }
+  const bruto = parseFloat(document.getElementById('edit-monto').value) || r.bruto || r.neto || 0;
+  const delta = efectoEnCuenta(nuevo, netoPorTipo(r, nuevo, bruto)) - efectoEnCuenta(r.tipo, r.neto);
+  const inp = r.bancoId ? document.getElementById(r.bancoId) : null;
+  const quita = ((r.diezmo || 0) > 0 || (r.ofrenda || 0) > 0) && nuevo === 'OUT';
+  document.getElementById('edit-tipo-nota').textContent =
+    'Pasa de ' + (r.tipo === 'IN' ? 'Ingreso' : 'Egreso') + ' a ' + (nuevo === 'IN' ? 'Ingreso' : 'Egreso') + '.'
+    + (quita ? ' Se quitará el diezmo/ofrenda que se había apartado de este ingreso.' : '')
+    + (inp ? '' : ' No se encontró la cuenta de este registro: ajuste el saldo a mano.');
+  document.getElementById('edit-ajuste-box').style.display = inp ? 'flex' : 'none';
+  document.getElementById('edit-ajuste-txt').textContent = inp
+    ? 'Ajustar también el saldo de "' + (r.bancoNombre || r.bancoId) + '": ' + (delta >= 0 ? '+' : '-') + 'L ' + fmt(Math.abs(delta)) + '. Quite la marca si prefiere corregir el saldo usted mismo.'
+    : '';
+  aviso.style.display = 'block';
+}
+function quitarDeHistorial(arr, r, monto) {
+  const i = arr.findIndex(x => x.fecha === r.fecha && x.desc === r.desc && Math.abs((x.monto || 0) - monto) < 0.01);
+  if (i >= 0) arr.splice(i, 1);
 }
 
 function guardarEdicion() {
@@ -3400,12 +3497,19 @@ function guardarEdicion() {
   if (idx === -1) return;
 
   const r       = registros[idx];
+  const nuevoTipo  = (document.getElementById('edit-tipo') || {}).value || r.tipo;
+  const cambioTipo = nuevoTipo !== r.tipo;
+  if (cambioTipo && getFacturaNo(r.id)) {
+    toast('Este registro ya tiene la factura No. ' + getFacturaNo(r.id) + '; no se puede cambiar entre ingreso y egreso.', 'err'); return;
+  }
+  if (cambioTipo && !confirm('¿Cambiar "' + r.desc + '" de ' + (r.tipo === 'IN' ? 'Ingreso' : 'Egreso') + ' a ' + (nuevoTipo === 'IN' ? 'Ingreso' : 'Egreso') + '?')) return;
   const bruto   = parseFloat(document.getElementById('edit-monto').value)    || r.bruto || r.neto;
   const costo   = parseFloat(document.getElementById('edit-costo').value)    || 0;
   const ganancia = Math.max(0, bruto - costo);
 
-  const nuevoDiezmo   = parseFloat(document.getElementById('edit-diezmo').value)  || 0;
-  const nuevaOfrenda  = parseFloat(document.getElementById('edit-ofrenda').value) || 0;
+  const aEgreso       = cambioTipo && nuevoTipo === 'OUT';            // un egreso no aparta diezmo ni ofrenda
+  const nuevoDiezmo   = aEgreso ? 0 : (parseFloat(document.getElementById('edit-diezmo').value)  || 0);
+  const nuevaOfrenda  = aEgreso ? 0 : (parseFloat(document.getElementById('edit-ofrenda').value) || 0);
   const viejoDiezmo   = r.diezmo  || 0;
   const viejaOfrenda  = r.ofrenda || 0;
 
@@ -3414,6 +3518,21 @@ function guardarEdicion() {
   const diffOfrenda = nuevaOfrenda - viejaOfrenda;
   if (diffDiezmo  !== 0) diezmoTotal  = Math.max(0, diezmoTotal  + diffDiezmo);
   if (diffOfrenda !== 0) ofrendaTotal = Math.max(0, ofrendaTotal + diffOfrenda);
+
+  if (aEgreso) {
+    if ((r.diezmo || 0) > 0)  quitarDeHistorial(diezmoHistorial,  r, r.diezmo);
+    if ((r.ofrenda || 0) > 0) quitarDeHistorial(ofrendaHistorial, r, r.ofrenda);
+  }
+  // Valores finales: sin cambio de tipo se conserva el comportamiento de siempre
+  let netoFinal = bruto, costoFinal = costo, gananciaFinal = ganancia;
+  if (cambioTipo) {
+    netoFinal     = netoPorTipo(r, nuevoTipo, bruto);
+    costoFinal    = nuevoTipo === 'OUT' ? 0 : costo;
+    gananciaFinal = nuevoTipo === 'IN' ? Math.max(0, netoFinal - costoFinal) : 0;
+  }
+  const ajustarCuenta = cambioTipo && document.getElementById('edit-ajustar-saldo').checked;
+  const efectoViejo   = efectoEnCuenta(r.tipo, r.neto);
+  const tipoMovViejo  = r.tipoMov;
 
   registros[idx] = {
     ...r,
@@ -3424,9 +3543,13 @@ function guardarEdicion() {
                          .toLocaleDateString('es-HN',{day:'2-digit',month:'2-digit',year:'numeric'})
                      : r.fecha,
     bruto,
-    neto:          bruto,
-    costo,
-    ganancia,
+    neto:          netoFinal,
+    costo:         costoFinal,
+    ganancia:      gananciaFinal,
+    tipo:          nuevoTipo,
+    tipoMov:       !cambioTipo ? tipoMovViejo
+                   : (nuevoTipo === 'OUT' && ['adelanto', 'saldo', 'credito-cliente'].includes(tipoMovViejo)) ? 'normal'
+                   : (nuevoTipo === 'IN' && tipoMovViejo === 'credito-proveedor') ? 'normal' : tipoMovViejo,
     cliente:       document.getElementById('edit-cliente').value.trim()  || '',
     categoria:     document.getElementById('edit-categoria').value       || r.categoria,
     metodoPago:    document.getElementById('edit-metodo').value          || '',
@@ -3437,6 +3560,17 @@ function guardarEdicion() {
     observaciones: document.getElementById('edit-obs').value.trim()      || ''
   };
 
+  if (cambioTipo) {
+    if (ajustarCuenta && r.bancoId) {                       // corrige el saldo de la cuenta
+      const inp = document.getElementById(r.bancoId);
+      if (inp) { inp.value = ((parseFloat(inp.value) || 0) + efectoEnCuenta(nuevoTipo, netoFinal) - efectoViejo).toFixed(2); actualizarColorSaldo(inp); }
+    }
+    try {                                                    // calendario / flujo diario
+      const lista = (sData[r.fechaKey] || {}).f || [];
+      const e = lista.find(x => x.fromCaja && x.d === r.desc && Math.abs((x.v || 0) - (r.neto || 0)) < 0.005 && x.t === (r.tipo === 'IN' ? 'in' : 'out'));
+      if (e) { e.t = nuevoTipo === 'IN' ? 'in' : 'out'; e.v = netoFinal; }
+    } catch (err) {}
+  }
   saveAll();
   renderHistorial();
   calcular();
@@ -3444,7 +3578,7 @@ function guardarEdicion() {
   renderOfrendaHist();
   actualizarRegistroGAS(registros[idx]);
   cerrarEditar();
-  toast('✓ Registro actualizado');
+  toast(cambioTipo ? '✓ Registro cambiado a ' + (nuevoTipo === 'IN' ? 'Ingreso' : 'Egreso') : '✓ Registro actualizado');
 }
 
 /* Envía la edición a Google Sheets buscando y reemplazando la fila por ID,
@@ -5805,6 +5939,7 @@ function abrirModalEmpresa() {
   document.getElementById('emp-corr-actual').value  = E.corrActual   || 1;
   document.getElementById('emp-isv').value          = (E.isv === 0 || E.isv === '0') ? 0 : (E.isv || 15);
   document.getElementById('emp-sar-activo').value   = E.sarActivo    || 0;
+  refrescarPreviewFirma();
   document.getElementById('modal-empresa').classList.add('open');
 }
 
@@ -5970,6 +6105,7 @@ function pdfFirmas(doc, y, izq, der) {
   if (y > 250) { doc.addPage(); y = 30; }
   y += 18; doc.setDrawColor(90, 100, 110); doc.setLineWidth(0.3);
   doc.line(25, y, 85, y); doc.line(125, y, 185, y);
+  pdfDibujarFirmaSello(doc, y);
   doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 100, 110);
   doc.text(izq, 55, y + 5, { align: 'center' }); doc.text(der, 155, y + 5, { align: 'center' });
   return y + 10;
@@ -6427,6 +6563,118 @@ function montoEnLetras(valor) {
   return t + (redondoMillon ? ' DE' : '') + (ent === 1 ? ' LEMPIRA' : ' LEMPIRAS') + ' CON ' + String(cent).padStart(2, '0') + '/100';
 }
 
+/* ── Firma y sello digital ── */
+function getFirmaImg(kind) { try { const o = JSON.parse(localStorage.getItem('cr_' + kind) || 'null'); return (o && o.d) ? o : null; } catch (e) { return null; } }
+function setFirmaImg(kind, o) {
+  try { if (o) localStorage.setItem('cr_' + kind, JSON.stringify(o)); else localStorage.removeItem('cr_' + kind); return true; }
+  catch (e) { toast('No hay espacio para guardar la imagen en este dispositivo', 'err'); return false; }
+}
+/* Vuelve transparente el fondo claro del papel y conserva el color de la tinta */
+function quitarFondoClaro(px, w, h) {
+  const borde = [];
+  const mB = Math.max(1, Math.round(Math.min(w, h) * 0.04));
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (x < mB || y < mB || x >= w - mB || y >= h - mB) { const i = (y * w + x) * 4; borde.push(0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2]); }
+  }
+  borde.sort((a, b) => a - b);
+  let fondo = borde.length ? borde[Math.floor(borde.length / 2)] : 250;
+  if (fondo < 140) fondo = 250;                      // imagen oscura: se usa el umbral normal
+  const claro = fondo - 18, oscuro = fondo * 0.55;
+  for (let i = 0; i < px.length; i += 4) {
+    const lum = 0.299 * px[i] + 0.587 * px[i + 1] + 0.114 * px[i + 2];
+    const a = lum >= claro ? 0 : lum <= oscuro ? 255 : Math.round((claro - lum) * 255 / (claro - oscuro));
+    px[i + 3] = Math.min(px[i + 3], a);
+  }
+}
+function cajaDeTinta(px, w, h) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (px[(y * w + x) * 4 + 3] > 25) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+}
+function guardarRecorteFirma(cv, kind) {
+  const w = cv.width, h = cv.height;
+  const bb = cajaDeTinta(cv.getContext('2d').getImageData(0, 0, w, h).data, w, h);
+  if (!bb) { toast('No se vio ninguna ' + (kind === 'firma' ? 'firma' : 'marca de sello') + ' en la imagen. Pruebe con más luz y fondo blanco.', 'err'); return; }
+  const pad = 4, x = Math.max(0, bb.x - pad), y = Math.max(0, bb.y - pad);
+  const ww = Math.min(w - x, bb.w + pad * 2), hh = Math.min(h - y, bb.h + pad * 2);
+  const out = document.createElement('canvas'); out.width = ww; out.height = hh;
+  out.getContext('2d').drawImage(cv, x, y, ww, hh, 0, 0, ww, hh);
+  if (setFirmaImg(kind, { d: out.toDataURL('image/png'), w: ww, h: hh })) { refrescarPreviewFirma(); toast((kind === 'firma' ? 'Firma' : 'Sello') + ' guardado ✓'); }
+}
+function procesarImagenFirma(file, kind) {
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const esc = Math.min(1, (kind === 'firma' ? 700 : 500) / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * esc)), h = Math.max(1, Math.round(img.height * esc));
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+      const id = cx.getImageData(0, 0, w, h);
+      quitarFondoClaro(id.data, w, h);
+      cx.putImageData(id, 0, 0);
+      guardarRecorteFirma(cv, kind);
+    };
+    img.onerror = () => toast('No se pudo leer la imagen', 'err');
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(file);
+}
+function quitarFirmaImg(kind) { if (setFirmaImg(kind, null)) { refrescarPreviewFirma(); toast((kind === 'firma' ? 'Firma' : 'Sello') + ' quitado'); } }
+function refrescarPreviewFirma() {
+  ['firma', 'sello'].forEach(k => {
+    const el = document.getElementById(k + '-prev'); if (!el) return;
+    const o = getFirmaImg(k);
+    el.innerHTML = o ? '<img src="' + o.d + '" style="max-width:100%;max-height:52px">' : '<span style="font-size:.6rem;color:#888">' + (k === 'firma' ? 'Sin firma' : 'Sin sello') + '</span>';
+  });
+}
+
+/* Dibujar la firma con el dedo o el mouse */
+let _padColor = '#0a1f5c', _padDibujando = false, _padTrazos = 0, _padUlt = null;
+function limpiarPadFirma() { const cv = document.getElementById('firma-canvas'); cv.getContext('2d').clearRect(0, 0, cv.width, cv.height); _padTrazos = 0; }
+function abrirPadFirma() {
+  const cv = document.getElementById('firma-canvas');
+  if (!cv._listo) {
+    const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * cv.width / r.width, y: (e.clientY - r.top) * cv.height / r.height }; };
+    cv.addEventListener('pointerdown', e => { e.preventDefault(); _padDibujando = true; _padUlt = pos(e); try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      const c = cv.getContext('2d'); c.fillStyle = _padColor; c.beginPath(); c.arc(_padUlt.x, _padUlt.y, 1.8, 0, Math.PI * 2); c.fill(); _padTrazos++; });
+    cv.addEventListener('pointermove', e => { if (!_padDibujando) return; e.preventDefault();
+      const p = pos(e), c = cv.getContext('2d'); c.strokeStyle = _padColor; c.lineWidth = 3.4; c.lineCap = 'round'; c.lineJoin = 'round';
+      c.beginPath(); c.moveTo(_padUlt.x, _padUlt.y); c.lineTo(p.x, p.y); c.stroke(); _padUlt = p; });
+    const fin = () => { _padDibujando = false; };
+    cv.addEventListener('pointerup', fin); cv.addEventListener('pointercancel', fin); cv.addEventListener('pointerleave', fin);
+    cv._listo = true;
+  }
+  limpiarPadFirma();
+  document.getElementById('modal-firma-pad').classList.add('open');
+}
+function cerrarPadFirma() { document.getElementById('modal-firma-pad').classList.remove('open'); }
+function usarFirmaDibujada() {
+  if (!_padTrazos) { toast('Dibuje su firma primero', 'err'); return; }
+  guardarRecorteFirma(document.getElementById('firma-canvas'), 'firma');
+  cerrarPadFirma();
+}
+
+/* Pone la firma (izquierda, sobre la línea) y el sello (junto a ella) en el PDF */
+function pdfDibujarFirmaSello(doc, yLinea) {
+  if (window._pdfConFirma === false) return;
+  const f = getFirmaImg('firma'), s = getFirmaImg('sello');
+  const caja = (img, maxW, maxH) => { const r = Math.min(maxW / img.w, maxH / img.h); return [img.w * r, img.h * r]; };
+  try {
+    if (f && s) {
+      const [fw, fh] = caja(f, 34, 16); doc.addImage(f.d, 'PNG', 26 + (34 - fw) / 2, yLinea - fh - 0.5, fw, fh);
+      const [sw, sh] = caja(s, 22, 22); doc.addImage(s.d, 'PNG', 62 + (22 - sw) / 2, yLinea - sh - 0.5, sw, sh);
+    } else if (f) {
+      const [fw, fh] = caja(f, 50, 16); doc.addImage(f.d, 'PNG', 55 - fw / 2, yLinea - fh - 0.5, fw, fh);
+    } else if (s) {
+      const [sw, sh] = caja(s, 24, 22); doc.addImage(s.d, 'PNG', 55 - sw / 2, yLinea - sh - 0.5, sw, sh);
+    }
+  } catch (e) { console.warn('No se pudo dibujar la firma o el sello', e); }
+}
+
 function abrirDoc(d) {
   docPendiente = d;
   document.getElementById('doc-titulo').textContent        = d.titulo;
@@ -6444,6 +6692,8 @@ function abrirDoc(d) {
   actualizarSelectorTipoDoc(d);
   refrescarListaClientes();
   actualizarSelectorProyectoDoc(d);
+  const fb = document.getElementById('doc-firma-box');
+  if (fb) { fb.style.display = (getFirmaImg('firma') || getFirmaImg('sello')) ? 'flex' : 'none'; if (!d._keep) document.getElementById('doc-con-firma').checked = true; }
   document.getElementById('modal-doc').classList.add('open');
   cargarJsPDF().catch(() => {});
 }
@@ -6617,6 +6867,8 @@ async function construirPDF() {
   const doc   = new JsPDF({ unit: 'mm', format: 'a4' });
   // Pasar datos del cliente al render
   docPendiente._clienteDoc = getDocClienteActual();
+  const cf = document.getElementById('doc-con-firma');
+  window._pdfConFirma = cf ? cf.checked : true;
   docPendiente.render(doc);
   pdfPie(doc);
   return doc;
