@@ -810,6 +810,15 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 </style>
 </head>
 <body onload="boot()">
+<div id="lock-screen" style="display:none;position:fixed;inset:0;z-index:2000;background:#080c10;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:20px;text-align:center">
+  <div style="font-size:2.2rem">🔒</div>
+  <div style="font-weight:800;color:#e2eaf3;font-size:1.05rem">MultiServicios Rivas Tech</div>
+  <div style="font-size:.78rem;color:#8aa0b5">Escriba su clave de acceso</div>
+  <input type="password" id="lock-input" autocomplete="current-password" onkeydown="if(event.key==='Enter')desbloquear()" style="width:240px;max-width:90vw;padding:11px 12px;border-radius:8px;border:1px solid #2a3a4a;background:#0d141b;color:#e2eaf3;font-size:1rem;text-align:center">
+  <button onclick="desbloquear()" style="width:240px;max-width:90vw;padding:11px;border-radius:8px;border:none;background:#00e5a0;color:#04140a;font-weight:800;font-size:.9rem;cursor:pointer">Entrar</button>
+  <div id="lock-msg" style="font-size:.74rem;color:#ff6b6b;min-height:1em"></div>
+</div>
+<script>(function(){try{var c=localStorage.getItem('cr_clave'),on=localStorage.getItem('cr_lock')==='1',t=parseInt(localStorage.getItem('cr_sesion_ok')||'0',10);if(c&&on&&(!t||Date.now()-t>30*24*3600*1000)){document.getElementById('lock-screen').style.display='flex';}}catch(e){}})();</script>
 
 <!-- NAV -->
 <nav>
@@ -830,6 +839,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <button class="tab-btn" onclick="tab('v-inv',this)">📦 Inventario</button>
     <button class="tab-btn" onclick="tab('v-proyectos',this)">📋 Proyectos</button>
     <button class="tab-btn" onclick="tab('v-creditos',this)">💳 Créditos</button>
+    <button class="tab-btn" onclick="tab('v-planilla',this)">👥 Planilla</button>
     <button class="tab-btn" onclick="tab('v-gastos-per',this)">🏠 Personal</button>
     <button class="tab-btn" onclick="tab('v-agenda',this)">📝 Agenda</button>
     <button class="tab-btn" onclick="tab('v-reportes',this);renderReportes()">📊 Reportes</button>
@@ -882,6 +892,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
   <div class="pat-right">
     <button class="top-btn" onclick="exportCSV()">⬇ Exportar CSV</button>
     <button class="top-btn" onclick="syncGAS()">☁ Sincronizar</button>
+    <button class="top-btn" onclick="abrirSeguridad()" style="border-color:var(--amber);color:var(--amber)">🔒 Seguridad</button>
     <button class="top-btn" onclick="cierreDiario()" style="border-color:var(--green);color:var(--green)">📆 Cierre Día</button>
     <button class="top-btn" onclick="cierreSemanal()" style="border-color:var(--blue);color:var(--blue)">📊 Cierre Semana</button>
     <button class="top-btn" onclick="cierreMensual()" style="border-color:var(--amber);color:var(--amber)">📅 Cierre Mes</button>
@@ -1408,6 +1419,11 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 <div id="v-inv" class="view">
   <div class="inv-wrap">
 
+    <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+      <span id="inv-sync-info" style="font-size:.62rem;color:var(--muted)">☁️ Se guarda también en Google Sheets (hoja "Inventario")</span>
+      <button onclick="invSincronizar(false)" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);padding:5px 12px;border-radius:7px;font-size:.68rem;cursor:pointer;font-family:var(--font);font-weight:700">🔄 Sincronizar ahora</button>
+    </div>
+
     <!-- Stats rápidos -->
     <div class="inv-stats">
       <div class="inv-stat">
@@ -1590,6 +1606,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="btn-save" onclick="abrirModalCredito('dado')" style="padding:7px 14px;font-size:.73rem;background:var(--green)">📤 Crédito a Cliente</button>
         <button class="btn-save" onclick="abrirModalCredito('recibido')" style="padding:7px 14px;font-size:.73rem;background:var(--orange)">📥 Crédito de Proveedor</button>
+        <button class="btn-save" onclick="abrirCobros()" style="padding:7px 12px;font-size:.73rem;background:#2a2208;color:#fbbf24;border:1px solid #5a4a10">💰 Cuentas por cobrar</button>
         <button class="btn-save" onclick="abrirModalEmpresa()" style="padding:7px 12px;font-size:.73rem;background:var(--s3);color:var(--text2);border:1px solid var(--bd2)">⚙️ Datos del negocio</button>
       </div>
     </div>
@@ -1608,6 +1625,25 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <div id="cred-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:.82rem;display:none">
       Sin créditos registrados. Agrega uno con los botones de arriba.
     </div>
+  </div>
+</div>
+
+<!-- VISTA PLANILLA -->
+<div id="v-planilla" class="view">
+  <div style="padding:12px;max-width:1000px;margin:0 auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <div style="font-size:.85rem;font-weight:800;color:var(--text)">👥 Planilla de pagos</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn-save" onclick="abrirEmpleado()" style="padding:7px 14px;font-size:.73rem;background:var(--s3);color:var(--text2);border:1px solid var(--bd2)">➕ Empleado</button>
+        <button class="btn-save" onclick="nuevaPlanilla()" style="padding:7px 14px;font-size:.73rem;background:var(--green)">🧾 Nueva planilla</button>
+      </div>
+    </div>
+    <div id="pl-resumen" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:14px"></div>
+    <div style="font-size:.66rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Empleados</div>
+    <div id="pl-empleados" style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px"></div>
+    <div style="font-size:.66rem;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Planillas</div>
+    <div id="pl-historial" style="display:flex;flex-direction:column;gap:6px"></div>
+    <div style="font-size:.6rem;color:var(--dim);margin-top:14px;line-height:1.5">Los datos de la planilla se guardan en este dispositivo, se respaldan con 🔒 Seguridad y se envían a las hojas "Empleados" y "Planillas" de Google Sheets. Los porcentajes y montos de IHSS, RAP e ISR los define usted: confírmelos con su contador, porque cambian con la ley.</div>
   </div>
 </div>
 
@@ -1680,6 +1716,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
 
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div style="font-size:.85rem;font-weight:800;color:var(--text)">📊 Reportes</div>
+      <button onclick="abrirReporteISV()" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);padding:6px 14px;border-radius:7px;font-size:.72rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 Reporte de ISV</button>
       <button onclick="exportarReporteCSV()" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);padding:6px 14px;border-radius:7px;font-size:.7rem;font-weight:700;cursor:pointer;font-family:var(--font)">⬇ Exportar CSV</button>
     </div>
 
@@ -1916,8 +1953,10 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
         <input type="checkbox" id="det-on" onchange="detToggle()"> 🧮 Detallar por ítems (cantidad, precio e impuestos)
       </label>
       <div id="det-panel" style="display:none;margin-top:8px">
+        <datalist id="lista-inv"></datalist>
         <div id="det-items" style="display:flex;flex-direction:column;gap:6px"></div>
         <button type="button" onclick="detAgregar()" style="margin-top:6px;background:var(--s3);color:var(--text2);border:1px solid var(--bd2);border-radius:6px;padding:6px 10px;font-size:.7rem;cursor:pointer;font-family:var(--font);font-weight:700">➕ Agregar ítem</button>
+        <div id="det-inv-box" style="display:none;margin:8px 0 0"><label style="display:flex;align-items:center;gap:6px;font-size:.7rem;color:var(--text2);cursor:pointer"><input type="checkbox" id="det-desc-inv" checked onchange="detOpt('descInv',this.checked)"> 📦 Descontar del inventario al emitir (y devolverlo si se anula)</label></div>
         <div style="display:flex;flex-wrap:wrap;gap:14px;margin:9px 0 6px;font-size:.7rem;color:var(--text2)">
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="det-desglosar" onchange="detOpt('desglosar',this.checked)"> Desglosar ISV</label>
           <label style="display:flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" id="det-incluye" onchange="detOpt('incluyeISV',this.checked)"> Los precios ya incluyen ISV</label>
@@ -1960,7 +1999,7 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
       <div id="doc-proy-nota" style="font-size:.62rem;color:var(--muted);margin-top:5px;line-height:1.4"></div>
     </div>
     <!-- Datos del cliente para la factura/recibo -->
-    <div style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:8px">
+    <div id="doc-cliente-box" style="background:var(--s3);border:1px solid var(--bd2);border-radius:8px;padding:10px;margin-bottom:8px">
       <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:7px">📋 Datos del cliente (para el documento)</div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <input type="text" id="doc-cliente-nombre" class="pi" list="lista-clientes" autocomplete="off" onchange="autocompletarClienteDoc()" placeholder="Nombre del cliente" style="margin:0">
@@ -2153,6 +2192,123 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
     <div class="modal-btns" style="margin-top:12px;flex-wrap:wrap;gap:6px">
       <button class="mbtn-cancel" onclick="cerrarLibroFacturas()">Cerrar</button>
       <button class="mbtn-ok" style="background:var(--blue)" onclick="descargarLibroFacturasCSV()">📥 Descargar CSV</button>
+      <button class="mbtn-ok" style="background:#0d2a1c;color:#4ade80;border:1px solid #14532d" onclick="cerrarLibroFacturas();abrirReporteISV()">🧾 Reporte de ISV</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SEGURIDAD Y RESPALDO -->
+<div class="overlay" id="modal-seguridad" onclick="if(event.target===this)cerrarSeguridad()">
+  <div class="modal" style="max-width:500px;width:96%;max-height:92vh;overflow-y:auto">
+    <h3 style="margin-bottom:10px">🔒 Seguridad y respaldo</h3>
+    <div style="font-size:.62rem;color:var(--acc);font-weight:800;text-transform:uppercase;margin-bottom:6px">Clave de acceso</div>
+    <input type="password" id="seg-clave" class="pi" placeholder="Clave (mínimo 4 caracteres)" autocomplete="new-password" style="margin:0 0 6px 0;width:100%">
+    <button type="button" onclick="guardarClaveSeg()" class="mbtn-ok" style="width:100%;margin-bottom:6px">💾 Guardar clave en este dispositivo</button>
+    <div style="font-size:.62rem;color:var(--dim);line-height:1.5;margin-bottom:8px">Para que su hoja de Google también quede protegida: en Apps Script entre a <strong>⚙ Configuración del proyecto → Propiedades de la secuencia de comandos → Agregar propiedad</strong>, escriba el nombre <strong>CLAVE</strong> y como valor esta misma clave. Debe ser idéntica en los dos lados.</div>
+    <label style="display:flex;align-items:center;gap:7px;font-size:.72rem;color:var(--text2);margin-bottom:8px;cursor:pointer"><input type="checkbox" id="seg-lock" onchange="segToggleLock()"> Pedir la clave al abrir la app (cada 30 días en este dispositivo)</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button type="button" onclick="probarConexion()" class="mbtn-cancel" style="flex:1">🔌 Probar conexión</button>
+      <button type="button" onclick="bloquearAhora()" class="mbtn-cancel" style="flex:1">🔒 Bloquear ahora</button>
+    </div>
+    <div id="seg-estado" style="font-size:.7rem;line-height:1.5;min-height:1.2em;margin-bottom:12px"></div>
+    <div style="border-top:1px solid var(--bd);padding-top:10px;font-size:.62rem;color:var(--acc);font-weight:800;text-transform:uppercase;margin-bottom:6px">Respaldo de sus datos</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button type="button" onclick="descargarRespaldo()" class="mbtn-ok" style="flex:1;background:var(--blue)">📥 Descargar respaldo</button>
+      <button type="button" onclick="document.getElementById('seg-file').click()" class="mbtn-cancel" style="flex:1">📤 Restaurar desde archivo</button>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      <button type="button" onclick="respaldarNube(false)" class="mbtn-ok" style="flex:1;background:#0d2a1c;color:#4ade80;border:1px solid #14532d">☁️ Respaldar en Google Sheets</button>
+      <button type="button" onclick="restaurarDesdeNube()" class="mbtn-cancel" style="flex:1">☁️ Restaurar desde Google Sheets</button>
+    </div>
+    <input type="file" id="seg-file" accept=".json,application/json" style="display:none" onchange="restaurarRespaldoArchivo(this.files[0]);this.value=''">
+    <label style="display:flex;align-items:center;gap:7px;font-size:.7rem;color:var(--text2);margin:6px 0;cursor:pointer"><input type="checkbox" id="seg-auto" onchange="segToggleAuto()"> Respaldo automático diario en Google Sheets</label>
+    <div id="seg-respaldo-info" style="font-size:.64rem;color:var(--muted);line-height:1.5"></div>
+    <div class="modal-btns" style="margin-top:12px"><button class="mbtn-cancel" onclick="cerrarSeguridad()">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL REPORTE DE ISV / LIBRO DE VENTAS -->
+<div class="overlay" id="modal-isv" onclick="if(event.target===this)cerrarReporteISV()">
+  <div class="modal" style="max-width:620px;width:96%;max-height:92vh;overflow-y:auto">
+    <h3 style="margin-bottom:4px">🧾 Reporte de ISV y libro de ventas</h3>
+    <div style="font-size:.62rem;color:var(--dim);margin-bottom:8px;line-height:1.4">Sale de sus facturas emitidas en Google Sheets (todos sus dispositivos). Las anuladas se listan pero no suman.</div>
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:.7rem;color:var(--text2);font-weight:700">Mes:</span>
+      <input type="month" id="isv-mes" class="pi" onchange="renderReporteISV()" style="margin:0;width:auto">
+    </div>
+    <div id="isv-resumen"></div>
+    <div id="isv-tabla" style="margin-top:8px"></div>
+    <div class="modal-btns" style="margin-top:12px;flex-wrap:wrap;gap:6px">
+      <button class="mbtn-cancel" onclick="cerrarReporteISV()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--blue)" onclick="descargarReporteISVCSV()">📥 CSV</button>
+      <button class="mbtn-ok" onclick="descargarReporteISVPDF()">📄 PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CUENTAS POR COBRAR -->
+<div class="overlay" id="modal-cobros" onclick="if(event.target===this)cerrarCobros()">
+  <div class="modal" style="max-width:560px;width:96%;max-height:92vh;overflow-y:auto">
+    <h3 style="margin-bottom:4px">💰 Cuentas por cobrar</h3>
+    <div style="font-size:.62rem;color:var(--dim);margin-bottom:8px;line-height:1.4">Clientes con saldo pendiente en proyectos y créditos. "📲 Recordar" abre WhatsApp con el mensaje listo.</div>
+    <div id="cobros-total" style="margin-bottom:8px"></div>
+    <div id="cobros-lista"></div>
+    <div class="modal-btns" style="margin-top:12px"><button class="mbtn-cancel" onclick="cerrarCobros()">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- MODAL EMPLEADO -->
+<div class="overlay" id="modal-empleado" onclick="if(event.target===this)cerrarEmpleado()">
+  <div class="modal" style="max-width:460px;width:96%;max-height:92vh;overflow-y:auto">
+    <h3 style="margin-bottom:10px">👤 <span id="empl-titulo">Empleado</span></h3>
+    <input type="hidden" id="empl-id">
+    <div style="display:flex;flex-direction:column;gap:7px">
+      <input type="text" id="empl-nombre" class="pi" placeholder="Nombre completo *" style="margin:0">
+      <div style="display:flex;gap:6px"><input type="text" id="empl-identidad" class="pi" placeholder="No. de identidad" style="margin:0;flex:1;min-width:0"><input type="text" id="empl-cargo" class="pi" placeholder="Cargo" style="margin:0;flex:1;min-width:0"></div>
+      <div style="display:flex;gap:6px"><input type="tel" id="empl-tel" class="pi" placeholder="WhatsApp (opcional)" style="margin:0;flex:1;min-width:0"><input type="date" id="empl-ingreso" class="pi" title="Fecha de ingreso" style="margin:0;flex:1;min-width:0"></div>
+      <div style="display:flex;gap:6px">
+        <select id="empl-period" class="pi" style="margin:0;flex:1"><option value="mensual">Pago mensual</option><option value="quincenal">Pago quincenal</option><option value="semanal">Pago semanal</option></select>
+        <input type="number" id="empl-salario" class="pi" min="0" step="0.01" placeholder="Salario por período (L) *" style="margin:0;flex:1;min-width:0">
+      </div>
+      <div style="font-size:.58rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-top:4px">Deducciones habituales (se pueden cambiar en cada planilla)</div>
+      <div style="display:flex;gap:6px"><input type="number" id="empl-ihss" class="pi" min="0" step="0.01" placeholder="IHSS %" style="margin:0;flex:1;min-width:0"><input type="number" id="empl-techo" class="pi" min="0" step="0.01" placeholder="Techo IHSS (L, opcional)" style="margin:0;flex:1;min-width:0"></div>
+      <div style="display:flex;gap:6px"><input type="number" id="empl-rap" class="pi" min="0" step="0.01" placeholder="RAP %" style="margin:0;flex:1;min-width:0"><input type="number" id="empl-isr" class="pi" min="0" step="0.01" placeholder="ISR por período (L)" style="margin:0;flex:1;min-width:0"></div>
+      <input type="number" id="empl-prestamo" class="pi" min="0" step="0.01" placeholder="Préstamo / adelanto fijo por período (L)" style="margin:0">
+      <label style="display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--text2);cursor:pointer"><input type="checkbox" id="empl-activo" checked> Empleado activo (entra en las planillas nuevas)</label>
+    </div>
+    <div class="modal-btns" style="margin-top:12px"><button class="mbtn-cancel" onclick="cerrarEmpleado()">Cancelar</button><button class="mbtn-ok" onclick="guardarEmpleado()">💾 Guardar</button></div>
+  </div>
+</div>
+
+<!-- MODAL PLANILLA -->
+<div class="overlay" id="modal-planilla" onclick="if(event.target===this)cerrarPlanilla()">
+  <div class="modal" style="max-width:720px;width:97%;max-height:94vh;overflow-y:auto">
+    <h3 style="margin-bottom:8px">🧾 <span id="pl-titulo">Planilla</span></h3>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px;margin-bottom:8px">
+      <input type="text" id="pl-periodo" class="pi" placeholder="Período (ej. Noviembre 2026)" style="margin:0">
+      <input type="date" id="pl-desde" class="pi" title="Desde" style="margin:0">
+      <input type="date" id="pl-hasta" class="pi" title="Hasta" style="margin:0">
+      <input type="date" id="pl-fecha-pago" class="pi" title="Fecha de pago" style="margin:0">
+    </div>
+    <div id="pl-filtro-box" style="display:flex;gap:6px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+      <span style="font-size:.66rem;color:var(--muted);font-weight:700">Incluir:</span>
+      <select id="pl-filtro" class="pi" onchange="plRegenerar()" style="margin:0;width:auto"><option value="todos">Todos los activos</option><option value="mensual">Pago mensual</option><option value="quincenal">Pago quincenal</option><option value="semanal">Pago semanal</option></select>
+    </div>
+    <div id="pl-lineas"></div>
+    <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap;align-items:center">
+      <select id="pl-add-emp" class="pi" style="margin:0;flex:1;min-width:150px"></select>
+      <button type="button" class="mbtn-cancel" onclick="plAgregarEmpleado()">➕ Agregar a esta planilla</button>
+    </div>
+    <div id="pl-totales" style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:9px 12px;font-family:var(--mono);font-size:.76rem;line-height:1.7;color:var(--text2)"></div>
+    <div style="border-top:1px solid var(--bd);margin-top:10px;padding-top:8px">
+      <div style="font-size:.6rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:5px">Registrar el pago en Cajas (egreso de Nómina)</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><select id="pl-banco" class="pi" style="margin:0;flex:1;min-width:160px"></select><button type="button" id="pl-btn-pagar" class="mbtn-ok" style="background:#0d2a1c;color:#4ade80;border:1px solid #14532d" onclick="pagarPlanilla()">💵 Registrar pago</button></div>
+      <div id="pl-pagada-info" style="font-size:.64rem;color:var(--green);margin-top:5px"></div>
+    </div>
+    <div class="modal-btns" style="margin-top:12px;flex-wrap:wrap;gap:6px">
+      <button class="mbtn-cancel" onclick="cerrarPlanilla()">Cerrar</button>
+      <button class="mbtn-ok" style="background:var(--blue)" onclick="descargarPlanillaGeneral(_pl)">📄 Planilla general</button>
+      <button class="mbtn-ok" onclick="guardarPlanilla()">💾 Guardar planilla</button>
     </div>
   </div>
 </div>
@@ -2545,6 +2701,29 @@ select.pi optgroup { color: var(--muted); font-size: .7rem; }
    ═══════════════════════════════════════════ */
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbygKSTT3C5szDfDHffMJ4R5-m9yo4M6ibuZMjFukYFZ-OlPiyTPHIWIvHF17GMC6FLUfg/exec';
 
+/* Agrega la clave de acceso a toda llamada hacia el Apps Script (la clave se escribe en el dispositivo; no está en este código) */
+function envolverFetchGAS(fetchBase) {
+  return function (url, opts) {
+    try {
+      if (typeof url === 'string' && url.indexOf(GAS_URL) === 0) {
+        const clave = getClaveAcceso();
+        const esGet = !opts || !opts.method || String(opts.method).toUpperCase() === 'GET';
+        if (clave) {
+          if (esGet) { if (url.indexOf('clave=') < 0) url += (url.indexOf('?') < 0 ? '?' : '&') + 'clave=' + encodeURIComponent(clave); }
+          else if (opts.body instanceof URLSearchParams && !opts.body.has('clave')) opts.body.append('clave', clave);
+        }
+        if (esGet) {
+          const pr = fetchBase(url, opts);
+          pr.then(res => { try { res.clone().json().then(j => { if (j && j.error === 'No autorizado') claveRechazada(); }).catch(() => {}); } catch (e) {} }).catch(() => {});
+          return pr;
+        }
+      }
+    } catch (e) {}
+    return fetchBase(url, opts);
+  };
+}
+window.fetch = envolverFetchGAS(window.fetch.bind(window));
+
 /* ═══ ESTADO ═══ */
 let registros = [];
 let ultimoRegistroId = null;
@@ -2660,6 +2839,7 @@ async function loadFromGAS() {
     const resp = await fetch(GAS_URL + '?action=load', { method: 'GET' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const data = await resp.json();
+    if (data && data.error === 'No autorizado') { claveRechazada(); throw new Error('Clave de acceso incorrecta'); }
     if (data && data.registros && data.registros.length > 0) {
       /* Normalizar registros que vienen de Google Sheets */
       const regsNormalizados = data.registros.map(r => {
@@ -2731,6 +2911,140 @@ function collectSaldos() {
   return saldos;
 }
 
+/* ═══════════════════════════════════════════════════════
+   SEGURIDAD Y RESPALDO
+   ═══════════════════════════════════════════════════════ */
+const CLAVES_NO_RESPALDAR = ['cr_clave', 'cr_sesion_ok', 'cr_lock'];
+function getClaveAcceso() { try { return localStorage.getItem('cr_clave') || ''; } catch (e) { return ''; } }
+let _claveAvisada = false;
+function claveRechazada() {
+  if (_claveAvisada) return; _claveAvisada = true;
+  toast('🔒 La clave de este dispositivo no coincide con la de Google. Revísela en Seguridad.', 'err');
+  const st = document.getElementById('gas-status'); if (st) { st.textContent = '✗ GAS: clave incorrecta'; st.className = 'gas-status err'; }
+  setTimeout(abrirSeguridad, 600);
+}
+function desbloquear() {
+  const v = document.getElementById('lock-input').value;
+  if (!getClaveAcceso() || v === getClaveAcceso()) {
+    try { localStorage.setItem('cr_sesion_ok', String(Date.now())); } catch (e) {}
+    document.getElementById('lock-screen').style.display = 'none'; document.getElementById('lock-input').value = ''; document.getElementById('lock-msg').textContent = '';
+  } else { document.getElementById('lock-msg').textContent = 'Clave incorrecta'; }
+}
+function bloquearAhora() {
+  if (!getClaveAcceso() || localStorage.getItem('cr_lock') !== '1') { toast('Primero guarde una clave y active "Pedir la clave al abrir"', 'warn'); return; }
+  localStorage.removeItem('cr_sesion_ok'); location.reload();
+}
+function abrirSeguridad() {
+  document.getElementById('seg-clave').value = '';
+  document.getElementById('seg-lock').checked = localStorage.getItem('cr_lock') === '1';
+  document.getElementById('seg-auto').checked = localStorage.getItem('cr_auto_nube') !== '0';
+  document.getElementById('seg-estado').textContent = getClaveAcceso() ? '🔑 Este dispositivo tiene una clave guardada.' : 'Este dispositivo todavía no tiene clave.';
+  refrescarInfoRespaldo();
+  document.getElementById('modal-seguridad').classList.add('open');
+}
+function cerrarSeguridad() { document.getElementById('modal-seguridad').classList.remove('open'); }
+function guardarClaveSeg() {
+  const v = document.getElementById('seg-clave').value;
+  if (v.length < 4) { toast('La clave debe tener al menos 4 caracteres', 'err'); return; }
+  localStorage.setItem('cr_clave', v); localStorage.setItem('cr_sesion_ok', String(Date.now())); _claveAvisada = false;
+  document.getElementById('seg-clave').value = ''; document.getElementById('seg-estado').textContent = '🔑 Clave guardada en este dispositivo. Ahora ponga la misma en Apps Script (propiedad CLAVE).';
+  toast('Clave guardada ✓');
+}
+function segToggleLock() {
+  if (document.getElementById('seg-lock').checked && !getClaveAcceso()) { document.getElementById('seg-lock').checked = false; toast('Primero guarde una clave', 'warn'); return; }
+  localStorage.setItem('cr_lock', document.getElementById('seg-lock').checked ? '1' : '0');
+}
+function segToggleAuto() { localStorage.setItem('cr_auto_nube', document.getElementById('seg-auto').checked ? '1' : '0'); }
+async function probarConexion(silencioso) {
+  const el = document.getElementById('seg-estado');
+  try {
+    if (!silencioso && el) { el.style.color = 'var(--muted)'; el.textContent = '⏳ Probando…'; }
+    const r = await (await fetch(GAS_URL + '?action=ping', { method: 'GET' })).json();
+    let msg, color;
+    if (r && r.error === 'No autorizado') { msg = '✗ Google rechazó la clave de este dispositivo. Revise que sea igual a la propiedad CLAVE de Apps Script.'; color = 'var(--red)'; }
+    else if (r && r.ok && r.version) { msg = '✓ Conectado a Apps Script ' + r.version + (r.protegido ? ' · protegido con clave 🔒' : ' · SIN clave: cualquiera con la dirección podría leer su hoja. Agregue la propiedad CLAVE.'); color = r.protegido ? 'var(--green)' : 'var(--amber)'; }
+    else { msg = '⚠ Conectado, pero su Apps Script es una versión anterior. Pegue el código nuevo y cree una nueva versión de la implementación.'; color = 'var(--amber)'; }
+    if (el) { el.style.color = color; el.textContent = msg; }
+    return r;
+  } catch (e) { if (el) { el.style.color = 'var(--red)'; el.textContent = '✗ Sin conexión con Google'; } return null; }
+}
+/* ── Respaldo ── */
+function datosParaRespaldo(modo) {
+  const o = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (!k || k.indexOf('cr_') !== 0 || CLAVES_NO_RESPALDAR.indexOf(k) > -1) continue;
+    const v = localStorage.getItem(k);
+    if (modo === 'nube' && (k === 'cr_pro' || v.length > 800000)) continue;   // los registros ya viven en Google Sheets
+    o[k] = v;
+  }
+  return o;
+}
+function aplicarRespaldo(datos) {
+  let n = 0;
+  Object.keys(datos || {}).forEach(k => { if (k.indexOf('cr_') === 0 && CLAVES_NO_RESPALDAR.indexOf(k) < 0 && typeof datos[k] === 'string') { localStorage.setItem(k, datos[k]); n++; } });
+  return n;
+}
+function marcarRespaldo(tipo) { try { localStorage.setItem(tipo === 'nube' ? 'cr_ult_nube' : 'cr_ult_archivo', String(Date.now())); } catch (e) {} refrescarInfoRespaldo(); }
+function refrescarInfoRespaldo() {
+  const el = document.getElementById('seg-respaldo-info'); if (!el) return;
+  const f = k => { const t = parseInt(localStorage.getItem(k) || '0', 10); return t ? new Date(t).toLocaleString('es-HN') : 'nunca'; };
+  el.textContent = 'Último respaldo en archivo: ' + f('cr_ult_archivo') + ' · Último respaldo en Google Sheets: ' + f('cr_ult_nube') + '. El respaldo guarda clientes, facturas, ítems, firma y sello, inventario, planilla y demás datos de este dispositivo.';
+}
+function descargarRespaldo() {
+  const paquete = { _tipo: 'respaldo-rivas', _version: 1, fecha: new Date().toISOString(), datos: datosParaRespaldo('archivo') };
+  const blob = new Blob([JSON.stringify(paquete)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Respaldo_Rivas_' + hoyKey() + '.json';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  marcarRespaldo('archivo'); toast('Respaldo descargado ✓ — guárdelo en un lugar seguro');
+}
+function validarPaquete(txt) {
+  let p; try { p = JSON.parse(txt); } catch (e) { return { error: 'El archivo no es un respaldo válido' }; }
+  if (!p || p._tipo !== 'respaldo-rivas' || typeof p.datos !== 'object') return { error: 'El archivo no es un respaldo de este sistema' };
+  return { paquete: p };
+}
+function restaurarPaquete(p) {
+  const n = Object.keys(p.datos).filter(k => k.indexOf('cr_') === 0 && CLAVES_NO_RESPALDAR.indexOf(k) < 0).length;
+  if (!confirm('Se reemplazarán los datos de este dispositivo por los del respaldo del ' + new Date(p.fecha).toLocaleString('es-HN') + ' (' + n + ' conjuntos de datos).\n\nLo que tenga ahora en este dispositivo y no esté en el respaldo se conserva; lo demás se sobrescribe.\n\n¿Continuar?')) return false;
+  aplicarRespaldo(p.datos); toast('Respaldo restaurado ✓ Recargando…'); setTimeout(() => location.reload(), 900); return true;
+}
+function restaurarRespaldoArchivo(file) {
+  if (!file) return;
+  const rd = new FileReader();
+  rd.onload = () => { const v = validarPaquete(rd.result); if (v.error) { toast(v.error, 'err'); return; } restaurarPaquete(v.paquete); };
+  rd.readAsText(file);
+}
+async function respaldarNube(silencioso) {
+  try {
+    const paquete = JSON.stringify({ _tipo: 'respaldo-rivas', _version: 1, fecha: new Date().toISOString(), datos: datosParaRespaldo('nube') });
+    const params = new URLSearchParams(); params.append('action', 'respaldoGuardar'); params.append('payload', paquete);
+    if (!silencioso) toast('⏳ Respaldando en Google Sheets…');
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+    await new Promise(r => setTimeout(r, 2500));
+    const r = await (await fetch(GAS_URL + '?action=respaldoLeer', { method: 'GET' })).json();
+    if (r && r.ok && r.payload && r.payload.length === paquete.length) { marcarRespaldo('nube'); if (!silencioso) toast('☁️ Respaldo guardado en Google Sheets ✓'); return true; }
+    if (!silencioso) toast('No se pudo confirmar el respaldo en Google Sheets. ¿Actualizó el Apps Script?', 'err');
+  } catch (e) { if (!silencioso) toast('Sin conexión: no se pudo respaldar en Google Sheets', 'err'); }
+  return false;
+}
+async function restaurarDesdeNube() {
+  try {
+    const r = await (await fetch(GAS_URL + '?action=respaldoLeer', { method: 'GET' })).json();
+    if (!r || !r.ok) { toast((r && r.error) || 'No hay respaldo en Google Sheets', 'err'); return; }
+    const v = validarPaquete(r.payload); if (v.error) { toast(v.error, 'err'); return; }
+    restaurarPaquete(v.paquete);
+  } catch (e) { toast('Sin conexión con Google Sheets', 'err'); }
+}
+function iniciarSeguridad() {
+  setTimeout(() => invSincronizar(true), 4000);
+  setTimeout(() => { if (getClaveAcceso() || true) probarConexion(true); }, 2500);
+  setTimeout(() => {
+    const t = k => parseInt(localStorage.getItem(k) || '0', 10), dia = 24 * 3600 * 1000;
+    if (localStorage.getItem('cr_auto_nube') !== '0' && Date.now() - t('cr_ult_nube') > dia) respaldarNube(true);
+    else if (Date.now() - Math.max(t('cr_ult_nube'), t('cr_ult_archivo')) > 14 * dia) toast('💾 Hace más de 14 días sin respaldo. Abra 🔒 Seguridad para respaldar.', 'warn');
+  }, 9000);
+}
+
 /* ═══ INIT ═══ */
 function boot() {
   workDate = hoyKey();
@@ -2746,6 +3060,7 @@ function boot() {
   inicializarSelectorCierre();
   poblarSelectorProyectos();
   syncBadge();
+  iniciarSeguridad();
 }
 
 /* ═══ TABS ═══ */
@@ -2760,6 +3075,7 @@ function tab(id, btn) {
   if (id === 'v-inv')        invRender();
   if (id === 'v-proyectos')  renderProyectos();
   if (id === 'v-creditos')   renderCreditos();
+  if (id === 'v-planilla')   renderPlanilla();
   if (id === 'v-agenda')     renderAgenda();
   if (id === 'v-gastos-per') renderGastosPersonales();
 }
@@ -3414,6 +3730,7 @@ function renderProyectos() {
           ${p.desc ? `<div style="font-size:.7rem;color:var(--muted);margin-top:3px;font-style:italic">${p.desc}</div>` : ''}
         </div>
         <div style="display:flex;gap:5px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end">
+          ${(p.cliente && resumenProyecto(p).saldo > 0) ? `<button onclick="recordarPagoProyecto('${p.id}')" style="background:#2a2208;border:1px solid #5a4a10;color:#fbbf24;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">📲 Cobrar</button>` : ''}
           <button onclick="abrirAbonoProyecto('${p.id}')" style="background:#2a2208;border:1px solid #5a4a10;color:#fbbf24;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">💰 Recibo de abono</button>
           <button onclick="docProyecto('${p.id}')" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 9px;font-size:.65rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 PDF</button>
           <button onclick="editarProyecto('${p.id}')" style="background:var(--blue-bg);border:1px solid var(--bd2);
@@ -3693,6 +4010,7 @@ function eliminarRegistro(id) {
   if (!r) return;
   if (getFacturaNo(r.id)) { toast('Este registro tiene la factura No. ' + getFacturaNo(r.id) + '. Primero anúlela desde el botón 🧾 y luego podrá eliminarlo.', 'err'); return; }
   if (!confirm(`¿Eliminar este registro?\n"${r.desc}" — L ${fmt(r.neto)}\n\nEsta acción no se puede deshacer.`)) return;
+  try { avisarInventario(aplicarInventarioRegistro(r.id, true)); } catch (e) {}
   registros = registros.filter(x => String(x.id) !== String(id));
   saveAll();
   renderHistorial();
@@ -4917,11 +5235,15 @@ let invEditId  = null;        // ID del ítem que se está editando
 let invUseId   = null;        // ID del ítem que se va a usar
 
 /* ── helpers ── */
+let invBorrados = [];        // ítems borrados [{id, mod}], para que el borrado también llegue a los otros dispositivos
 function invSave() {
+  invMarcarCambios();
   localStorage.setItem('cr_inventario', JSON.stringify(inventario));
+  localStorage.setItem('cr_inv_borrados', JSON.stringify(invBorrados));
 }
 function invLoad() {
   inventario = JSON.parse(localStorage.getItem('cr_inventario') || '[]');
+  try { invBorrados = JSON.parse(localStorage.getItem('cr_inv_borrados') || '[]'); } catch (e) { invBorrados = []; }
 }
 
 /* ── Stats ── */
@@ -5958,6 +6280,7 @@ function renderCreditos() {
         <div style="display:flex;gap:5px;flex-wrap:wrap">
           ${c.saldo > 0 ? `<button onclick="abrirModalAbono(${c.id})" style="background:var(--amb-bg);border:1px solid #3d2a00;color:var(--amber);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">💰 Abono</button>` : ''}
           ${c.saldo <= 0 && c.estado !== 'entregado' ? `<button onclick="marcarCreditoEntregado(${c.id})" style="background:var(--s3);border:1px solid var(--bd2);color:var(--text2);border-radius:5px;padding:4px 9px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">📦 Entregado</button>` : ''}
+          ${(c.tipo === 'dado' && c.saldo > 0) ? `<button onclick="recordarPagoCredito(${c.id})" style="background:#2a2208;border:1px solid #5a4a10;color:#fbbf24;border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">📲 Cobrar</button>` : ''}
           <button onclick="docCredito(${c.id})" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 PDF</button>
           <button onclick="editarCredito(${c.id})" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">✏️</button>
           <button onclick="eliminarCredito(${c.id})" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 8px;font-size:.63rem;cursor:pointer;font-family:var(--font);font-weight:700">🗑️</button>
@@ -6276,6 +6599,15 @@ function docRegistro(id, tipoPedido, keep) {
              (r.fecha || '').replace(/\//g, '-') + '_' + corrNum.replace(/\//g,'-') + '.pdf',
     resumen: armarResumen(), texto: armarTexto(), _resumenFn: armarResumen, _textoFn: armarTexto,
     _esfactura: usarFactura,
+    _factDatos: () => {
+      const dd = esIn ? getDetalleGuardado(r.id) : null, c = (dd && dd.on) ? calcularDetalle(dd) : null;
+      const cli = (docPendiente && docPendiente._clienteDoc) || {};
+      const base = { cliente: cli.nombre || r.cliente || 'Consumidor Final', rtn: cli.rtn || '', fecha: r.fecha, hora: r.hora || '' };
+      if (c) return { ...base, exonerado: c.exonerado, exento: c.exento, base15: c.base15, base18: c.base18, isv15: c.isv15, isv18: c.isv18, descuento: c.descuento, envio: c.envio, total: c.total };
+      const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+      return { ...base, exonerado: 0, exento: pctISV === 0 ? r2(monto) : 0, base15: (pctISV !== 0 && pctISV !== 18) ? r2(baseIsv) : 0, base18: pctISV === 18 ? r2(baseIsv) : 0,
+        isv15: (pctISV !== 0 && pctISV !== 18) ? r2(montoIsv) : 0, isv18: pctISV === 18 ? r2(montoIsv) : 0, descuento: 0, envio: 0, total: r2(monto) };
+    },
     registroId: r.id, _soportaFactura: esIn, _tipoDoc: tipoDoc,
     _facturaMotivo: (esIn && !disp.ok) ? (disp.motivo || '') : '', _keep: keep,
     render: doc => {
@@ -6872,6 +7204,7 @@ function actualizarEditorDetalle(d) {
   document.getElementById('det-envio-imp').value   = _det.envioImp || 'G15';
   document.getElementById('det-efectivo').value    = _det.efectivo;
   document.getElementById('det-exo').value         = _det.exo || '';
+  refrescarListaInv();
   detRenderItems(); detActualizar(true);
 }
 function detRenderItems() {
@@ -6879,7 +7212,7 @@ function detRenderItems() {
   cont.innerHTML = _det.items.map((it, i) => `
     <div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:7px">
       <div style="display:flex;gap:5px;margin-bottom:5px">
-        <input type="text" class="pi" placeholder="Descripción del ítem" value="${escH(it.d)}" oninput="detEdit(${i},'d',this.value)" style="margin:0;flex:1;font-size:.76rem">
+        <input type="text" class="pi" list="lista-inv" placeholder="Descripción del ítem (o elija del inventario)" value="${escH(it.d)}" oninput="detEdit(${i},'d',this.value)" onchange="detElegirInv(${i},this.value)" style="margin:0;flex:1;font-size:.76rem">
         <button type="button" onclick="detQuitar(${i})" title="Quitar ítem" style="background:var(--red-bg);color:var(--red);border:1px solid #3d0a0a;border-radius:6px;padding:0 9px;cursor:pointer;font-family:var(--font);font-weight:700">✕</button>
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center">
@@ -6887,7 +7220,7 @@ function detRenderItems() {
         <input type="number" class="pi" placeholder="Precio" min="0" step="0.01" value="${escH(it.p)}" oninput="detEdit(${i},'p',this.value)" style="margin:0;font-size:.76rem;flex:1 1 96px;min-width:80px">
         <select class="pi" onchange="detEdit(${i},'i',this.value)" style="margin:0;font-size:.68rem;flex:1 1 96px;min-width:90px">${Object.keys(DET_IMP).map(k => `<option value="${k}"${it.i === k ? ' selected' : ''}>${DET_IMP[k]}</option>`).join('')}</select>
         <div id="det-tot-${i}" style="margin-left:auto;min-width:84px;text-align:right;font-family:var(--mono);font-size:.74rem;color:var(--green);font-weight:700"></div>
-      </div>
+      </div>${invHint(it)}
     </div>`).join('');
 }
 function detToggle() {
@@ -6908,12 +7241,13 @@ function detQuitar(i) {
   else _det.items.splice(i, 1);
   detRenderItems(); detActualizar();
 }
-function detEdit(i, campo, val) { if (!_det || !_det.items[i]) return; _det.items[i][campo] = val; detActualizar(); }
+function detEdit(i, campo, val) { if (!_det || !_det.items[i]) return; _det.items[i][campo] = val; if (campo === 'p') delete _det.items[i].pAuto; detActualizar(); }
 function detOpt(campo, val) { if (!_det) return; _det[campo] = val; detActualizar(); }
 function detActualizar(sinGuardar) {
   if (!_det) return;
   const c = calcularDetalle(_det);
   _det.items.forEach((it, i) => { const el = document.getElementById('det-tot-' + i); if (el) el.textContent = L((parseFloat(it.c) || 0) * (parseFloat(it.p) || 0)); });
+  const hayInv = _det.items.some(it => it.inv); document.getElementById('det-inv-box').style.display = hayInv ? 'block' : 'none'; document.getElementById('det-desc-inv').checked = _det.descInv !== false;
   document.getElementById('det-exo-box').style.display = _det.items.some(it => it.i === 'EXO') || _det.envioImp === 'EXO' ? 'block' : 'none';
   const f = (t, v, fuerte) => '<div style="display:flex;justify-content:space-between;gap:10px' + (fuerte ? ';font-weight:800;color:var(--text);border-top:1px solid var(--bd);margin-top:3px;padding-top:3px' : '') + '"><span>' + t + '</span><span>' + v + '</span></div>';
   let hx = f('Subtotal', L(c.subtotal));
@@ -6961,7 +7295,7 @@ function actualizarAvisoFacturaEmitida(d) {
   document.getElementById('doc-fact-anular').style.display = esF ? 'inline-block' : 'none';
   box.style.display = 'block';
 }
-function anularFacturaDoc() {
+async function anularFacturaDoc() {
   if (!docPendiente || !docPendiente.registroId) return;
   const r = registros.find(x => x.id == docPendiente.registroId); if (!r) return;
   const no = getFacturaNo(r.id); if (!no) return;
@@ -6969,11 +7303,16 @@ function anularFacturaDoc() {
   if (motivo === null) return;
   if (!motivo.trim()) { toast('Escriba el motivo de la anulación', 'err'); return; }
   if (!confirm('¿Anular la factura No. ' + no + '?\n\nEl número queda anulado y NO se vuelve a usar. Se emitirá una factura nueva con el siguiente número.\n\nSi ya le entregó la original al cliente, recójala y márquela como ANULADA.')) return;
+  try {                                                  // primero en Google Sheets, para que todos los dispositivos lo vean
+    const res = await (await fetch(GAS_URL + '?' + new URLSearchParams({ action: 'facturaAnular', no: no, motivo: motivo.trim(), fecha: fechaHN(new Date()) }).toString())).json();
+    if (!res || !res.ok) throw new Error((res && res.error) || 'sin respuesta de Google');
+  } catch (e) { toast('No se pudo anular en Google Sheets: ' + e.message + '. Anular requiere internet.', 'err'); return; }
   const dd = getDetalleGuardado(r.id), c = (dd && dd.on) ? calcularDetalle(dd) : null;
   const lista = getFacturasAnuladas();
   lista.push({ no, registroId: r.id, fechaEmision: r.fecha, fechaAnulacion: fechaHN(new Date()), hora: horaHN(new Date()), motivo: motivo.trim(), total: c ? c.total : (r.bruto || r.neto || 0), cliente: r.cliente || '' });
   try { localStorage.setItem('cr_facturas_anuladas', JSON.stringify(lista)); } catch (e) { toast('No se pudo guardar la anulación en este dispositivo', 'err'); return; }
   const m = _lsMap('cr_facturas_emitidas'); delete m[String(r.id)]; _lsSet('cr_facturas_emitidas', m);
+  try { avisarInventario(aplicarInventarioRegistro(r.id, true)); } catch (e) {}
   toast('Factura No. ' + no + ' anulada ✓');
   docRegistro(r.id, 'factura');                       // vuelve a abrir el documento para emitir la nueva
 }
@@ -7006,26 +7345,531 @@ function csvLibroFacturas(filas) {
   const cab = ['No. factura', 'Fecha emisión', 'Cliente', 'Total', 'Estado', 'Fecha anulación', 'Motivo anulación'];
   return [cab.map(q).join(',')].concat(filas.map(f => [f.no, f.fecha, f.cliente, (f.total || 0).toFixed(2), f.estado, f.fechaAnul, f.motivo].map(q).join(','))).join('\r\n');
 }
-function abrirLibroFacturas() {
-  const filas = filasLibroFacturas(), faltan = numerosFaltantes(filas);
+let _libroFilas = [];
+async function abrirLibroFacturas() {
+  let filas = null, origen = 'servidor';
+  try {
+    const r = await (await fetch(GAS_URL + '?action=facturasLista', { method: 'GET' })).json();
+    if (r && r.ok && Array.isArray(r.facturas)) filas = r.facturas.map(f => ({ no: f.no, fecha: f.fecha, cliente: f.cliente || 'Consumidor Final', total: f.total, estado: f.estado === 'Anulada' ? 'Anulada' : 'Emitida', motivo: f.motivo, fechaAnul: f.fechaAnul })).sort((a, b) => String(b.no).localeCompare(String(a.no)));
+  } catch (e) {}
+  if (!filas) { filas = filasLibroFacturas(); origen = 'local'; }
+  _libroFilas = filas;
+  const faltan = numerosFaltantes(filas);
   const body = document.getElementById('libro-fact-body');
   const fila = f => '<div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;background:var(--s3);border:1px solid ' + (f.estado === 'Anulada' ? '#3d0a0a' : 'var(--bd)') + ';border-radius:7px;padding:7px 10px;margin-bottom:5px;font-size:.68rem">'
     + '<div><div style="font-family:var(--mono);font-weight:700;color:' + (f.estado === 'Anulada' ? 'var(--red)' : 'var(--text)') + '">' + escH(f.no) + (f.estado === 'Anulada' ? ' · ANULADA' : '') + '</div>'
     + '<div style="color:var(--muted)">' + escH(f.fecha) + ' · ' + escH(f.cliente) + '</div>'
     + (f.estado === 'Anulada' ? '<div style="color:var(--amber);margin-top:2px">Anulada el ' + escH(f.fechaAnul) + ': ' + escH(f.motivo) + '</div>' : '') + '</div>'
     + '<div style="font-family:var(--mono);color:' + (f.estado === 'Anulada' ? 'var(--muted)' : 'var(--green)') + ';font-weight:700;white-space:nowrap">' + L(f.total) + '</div></div>';
-  body.innerHTML = (faltan.length
-      ? '<div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:8px 10px;font-size:.66rem;color:var(--amber);line-height:1.5;margin-bottom:8px">⚠ Faltan números en este dispositivo: ' + escH(faltan.slice(0, 8).join(', ')) + (faltan.length > 8 ? ' y ' + (faltan.length - 8) + ' más' : '') + '. Puede que se hayan emitido desde otro dispositivo.</div>' : '')
+  body.innerHTML = (origen === 'local' ? '<div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:8px 10px;font-size:.66rem;color:var(--amber);line-height:1.5;margin-bottom:8px">⚠ Sin conexión con Google Sheets: se muestra solo lo emitido en este dispositivo.</div>' : '')
+    + (faltan.length
+      ? '<div style="background:var(--amb-bg);border:1px solid #3d2a00;border-radius:7px;padding:8px 10px;font-size:.66rem;color:var(--amber);line-height:1.5;margin-bottom:8px">⚠ Faltan números en este dispositivo: ' + escH(faltan.slice(0, 8).join(', ')) + (faltan.length > 8 ? ' y ' + (faltan.length - 8) + ' más' : '') + '. Revise si se perdió alguna.</div>' : '')
     + (filas.length ? filas.map(fila).join('') : '<div style="text-align:center;color:var(--muted);font-size:.74rem;padding:18px">Todavía no hay facturas emitidas en este dispositivo.</div>');
   document.getElementById('modal-libro-fact').classList.add('open');
 }
 function cerrarLibroFacturas() { document.getElementById('modal-libro-fact').classList.remove('open'); }
 function descargarLibroFacturasCSV() {
-  const filas = filasLibroFacturas();
+  const filas = _libroFilas.length ? _libroFilas : filasLibroFacturas();
   if (!filas.length) { toast('No hay facturas para descargar', 'warn'); return; }
   const blob = new Blob(['\uFEFF' + csvLibroFacturas(filas)], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Libro_Facturas_' + hoyKey() + '.csv';
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+/* ── Numeración central de facturas (Google Sheets) y reporte de ISV ── */
+function parametrosCorrelativo(E) {
+  const partes = String(E.corrDesde || '').split('-');
+  const ultimo = s => parseInt(String(s || '').split('-').pop(), 10);
+  if (partes.length === 4) return { prefijo: partes[0] + '-' + partes[1] + '-' + partes[2] + '-', largo: partes[3].length || 8, inicio: Math.max(ultimo(E.corrDesde) || 1, parseInt(E.corrActual, 10) || 1), hasta: ultimo(E.corrHasta) || 0 };
+  return { prefijo: '', largo: 8, inicio: parseInt(E.corrActual, 10) || 1, hasta: ultimo(E.corrHasta) || 0 };
+}
+async function asegurarFacturaCentral() {
+  const d = docPendiente, E = getEmpresa(), c = parametrosCorrelativo(E), datos = d._factDatos();
+  const params = new URLSearchParams({ action: 'facturaEmitir', registroId: String(d.registroId), prefijo: c.prefijo, inicio: String(c.inicio), hasta: String(c.hasta), largo: String(c.largo) });
+  Object.keys(datos).forEach(k => params.append(k, datos[k]));
+  let res;
+  try { res = await (await fetch(GAS_URL + '?' + params.toString(), { method: 'GET' })).json(); }
+  catch (e) { throw new Error('No hay conexión con Google Sheets. Las facturas necesitan internet para que el número no se repita.'); }
+  if (!res || !res.ok || !res.no) throw new Error(res && res.error ? res.error : 'Su Apps Script no responde a la numeración central. Pegue el código nuevo y cree una nueva versión.');
+  setFacturaNo(d.registroId, res.no);
+  try {                                                  // mantiene al día el "próximo número" de este dispositivo
+    const n = parseInt(String(res.no).slice(c.prefijo.length), 10), raw = JSON.parse(localStorage.getItem('cr_empresa') || '{}');
+    if (!isNaN(n) && n + 1 > (raw.corrActual || 1)) { raw.corrActual = n + 1; localStorage.setItem('cr_empresa', JSON.stringify(raw)); }
+  } catch (e) {}
+  try { actualizarAvisoFacturaEmitida(d); } catch (e) {}
+  return res.no;
+}
+
+const MESES_ES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function fechaAYm(f) { const m = String(f || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? m[3] + '-' + m[2].padStart(2, '0') : ''; }
+function calcularReporteISV(facturas, ym) {
+  const r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+  const filas = (facturas || []).filter(f => fechaAYm(f.fecha) === ym)
+    .sort((a, b) => (a.fecha.split('/').reverse().join('') + a.no).localeCompare(b.fecha.split('/').reverse().join('') + b.no));
+  const t = { n: 0, anuladas: 0, exonerado: 0, exento: 0, base15: 0, base18: 0, isv15: 0, isv18: 0, descuento: 0, envio: 0, total: 0 };
+  filas.forEach(f => {
+    if (f.estado === 'Anulada') { t.anuladas++; return; }
+    t.n++; ['exonerado', 'exento', 'base15', 'base18', 'isv15', 'isv18', 'descuento', 'envio', 'total'].forEach(k => { t[k] = r2(t[k] + (f[k] || 0)); });
+  });
+  t.isv = r2(t.isv15 + t.isv18);
+  return { filas, t };
+}
+function csvReporteISV(rep) {
+  const q = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const cab = ['Fecha', 'No. factura', 'Cliente', 'RTN', 'Estado', 'Exonerado', 'Exento', 'Gravado 15%', 'Gravado 18%', 'ISV 15%', 'ISV 18%', 'Descuentos', 'Cargo envío', 'Total'];
+  const f2 = n => (n || 0).toFixed(2);
+  const fila = f => { const an = f.estado === 'Anulada'; return [f.fecha, f.no, f.cliente, f.rtn, f.estado, ...['exonerado', 'exento', 'base15', 'base18', 'isv15', 'isv18', 'descuento', 'envio', 'total'].map(k => an ? '0.00' : f2(f[k]))]; };
+  const t = rep.t;
+  return [cab.map(q).join(',')].concat(rep.filas.map(f => fila(f).map(q).join(',')))
+    .concat([['TOTALES', '', '', '', t.n + ' emitidas', f2(t.exonerado), f2(t.exento), f2(t.base15), f2(t.base18), f2(t.isv15), f2(t.isv18), f2(t.descuento), f2(t.envio), f2(t.total)].map(q).join(',')]).join('\r\n');
+}
+let _isvFacturas = null, _isvRep = null;
+async function abrirReporteISV() {
+  document.getElementById('isv-mes').value = hoyKey().slice(0, 7);
+  document.getElementById('isv-resumen').innerHTML = '<div style="color:var(--muted);font-size:.72rem">⏳ Cargando facturas de Google Sheets…</div>'; document.getElementById('isv-tabla').innerHTML = '';
+  document.getElementById('modal-isv').classList.add('open');
+  try {
+    const r = await (await fetch(GAS_URL + '?action=facturasLista', { method: 'GET' })).json();
+    if (!r || !r.ok) throw new Error((r && r.error) || 'sin respuesta');
+    _isvFacturas = r.facturas;
+  } catch (e) { _isvFacturas = null; document.getElementById('isv-resumen').innerHTML = '<div style="color:var(--red);font-size:.74rem">No se pudo leer Google Sheets (' + escH(e.message) + '). Este reporte necesita internet y el Apps Script actualizado.</div>'; return; }
+  renderReporteISV();
+}
+function cerrarReporteISV() { document.getElementById('modal-isv').classList.remove('open'); }
+function renderReporteISV() {
+  if (!_isvFacturas) return;
+  const ym = document.getElementById('isv-mes').value || hoyKey().slice(0, 7);
+  const rep = _isvRep = calcularReporteISV(_isvFacturas, ym), t = rep.t;
+  const card = (tt, v, c) => '<div style="background:var(--s3);border:1px solid var(--bd);border-radius:7px;padding:7px 9px"><div style="font-size:.56rem;color:var(--muted);text-transform:uppercase;font-weight:700">' + tt + '</div><div style="font-family:var(--mono);font-size:.82rem;font-weight:700;color:' + (c || 'var(--text)') + '">' + L(v) + '</div></div>';
+  document.getElementById('isv-resumen').innerHTML = '<div style="font-size:.7rem;color:var(--text2);margin-bottom:6px"><strong>' + t.n + '</strong> factura' + (t.n === 1 ? '' : 's') + ' emitida' + (t.n === 1 ? '' : 's') + (t.anuladas ? ' · ' + t.anuladas + ' anulada' + (t.anuladas === 1 ? '' : 's') : '') + '</div>'
+    + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:6px">'
+    + card('Gravado 15%', t.base15) + card('ISV 15%', t.isv15, 'var(--amber)') + card('Gravado 18%', t.base18) + card('ISV 18%', t.isv18, 'var(--amber)')
+    + card('Exento', t.exento) + card('Exonerado', t.exonerado) + card('Descuentos', t.descuento) + card('Total ISV a declarar', t.isv, 'var(--green)') + card('Total facturado', t.total, 'var(--green)') + '</div>';
+  document.getElementById('isv-tabla').innerHTML = rep.filas.length ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.64rem;color:var(--text2)"><thead><tr style="color:var(--muted);text-align:left"><th style="padding:3px 5px">Fecha</th><th>No.</th><th>Cliente</th><th style="text-align:right">ISV</th><th style="text-align:right;padding-right:5px">Total</th></tr></thead><tbody>'
+    + rep.filas.map(f => { const an = f.estado === 'Anulada'; return '<tr style="border-top:1px solid var(--bd);' + (an ? 'color:var(--red);text-decoration:line-through' : '') + '"><td style="padding:3px 5px;white-space:nowrap">' + escH(f.fecha) + '</td><td style="font-family:var(--mono)">' + escH(String(f.no).slice(-8)) + '</td><td>' + escH(f.cliente) + (an ? ' (ANULADA)' : '') + '</td><td style="text-align:right;font-family:var(--mono)">' + (an ? '-' : fmt(f.isv15 + f.isv18)) + '</td><td style="text-align:right;font-family:var(--mono);padding-right:5px">' + (an ? '-' : fmt(f.total)) + '</td></tr>'; }).join('') + '</tbody></table></div>'
+    : '<div style="text-align:center;color:var(--muted);font-size:.74rem;padding:16px">No hay facturas en este mes.</div>';
+}
+function descargarReporteISVCSV() {
+  if (!_isvRep || !_isvRep.filas.length) { toast('No hay facturas en este mes', 'warn'); return; }
+  const blob = new Blob(['\uFEFF' + csvReporteISV(_isvRep)], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'Libro_Ventas_' + document.getElementById('isv-mes').value + '.csv';
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function descargarReporteISVPDF() {
+  if (!_isvRep || !_isvRep.filas.length) { toast('No hay facturas en este mes', 'warn'); return; }
+  try {
+    const JsPDF = await cargarJsPDF(), doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' }), E = getEmpresa();
+    const ym = document.getElementById('isv-mes').value, rep = _isvRep, t = rep.t;
+    const mes = MESES_ES[parseInt(ym.slice(5), 10) - 1] + ' ' + ym.slice(0, 4);
+    const cab = () => {
+      doc.setFillColor(11, 15, 20); doc.rect(0, 0, 297, 24, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(E.nombre, 10, 11);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text('REPORTE DE VENTAS E ISV - ' + mes.toUpperCase() + (E.rtn ? '   RTN: ' + E.rtn : ''), 10, 18);
+    };
+    const cols = [['Fecha', 18, 'l'], ['No. factura', 36, 'l'], ['Cliente', 46, 'l'], ['RTN', 26, 'l'], ['Exonerado', 20, 'r'], ['Exento', 20, 'r'], ['Grav. 15%', 22, 'r'], ['Grav. 18%', 20, 'r'], ['ISV 15%', 20, 'r'], ['ISV 18%', 18, 'r'], ['Total', 26, 'r']];
+    let y = 34; cab();
+    const cabTabla = () => { doc.setFillColor(30, 45, 61); doc.rect(10, y - 5, 272, 7, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(8); let x = 10; cols.forEach(c => { doc.text(c[0], c[2] === 'r' ? x + c[1] - 1.5 : x + 1.5, y, { align: c[2] === 'r' ? 'right' : 'left' }); x += c[1]; }); y += 7; };
+    cabTabla();
+    const linea = (vals, negrita, an) => { if (y > 190) { doc.addPage(); cab(); y = 34; cabTabla(); } doc.setFont('helvetica', negrita ? 'bold' : 'normal'); doc.setFontSize(8); doc.setTextColor(an ? 200 : 30, an ? 60 : 30, an ? 60 : 30); let x = 10; cols.forEach((c, i) => { doc.text(String(vals[i]), c[2] === 'r' ? x + c[1] - 1.5 : x + 1.5, y, { align: c[2] === 'r' ? 'right' : 'left', maxWidth: c[1] - 2 }); x += c[1]; }); y += 5.5; };
+    rep.filas.forEach(f => { const an = f.estado === 'Anulada', n2 = k => an ? '-' : fmt(f[k]); linea([f.fecha, f.no, f.cliente + (an ? ' (ANULADA)' : ''), f.rtn, n2('exonerado'), n2('exento'), n2('base15'), n2('base18'), n2('isv15'), n2('isv18'), n2('total')], false, an); });
+    y += 2; linea(['TOTALES', t.n + ' emitidas', '', '', fmt(t.exonerado), fmt(t.exento), fmt(t.base15), fmt(t.base18), fmt(t.isv15), fmt(t.isv18), fmt(t.total)], true);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20, 20, 20); doc.text('Total ISV a declarar: ' + L(t.isv) + '   |   Descuentos otorgados: ' + L(t.descuento) + '   |   Cargo por envío: ' + L(t.envio), 10, y + 8);
+    doc.save('Libro_Ventas_' + ym + '.pdf');
+  } catch (e) { toast(e.message || 'No se pudo crear el PDF', 'err'); }
+}
+
+/* ── Cuentas por cobrar y recordatorios de pago por WhatsApp ── */
+function cuentasPorCobrar() {
+  const m = {}, r2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+  const get = n => { const k = String(n || '').trim().toLowerCase(); if (!k) return null; return m[k] = m[k] || { nombre: String(n).trim(), proyectos: [], creditos: [], saldoP: 0, saldoC: 0 }; };
+  proyectos.forEach(p => {
+    if (!p.cliente || String(p.estado || '').toLowerCase() === 'cancelado') return;
+    const s = resumenProyecto(p).saldo;
+    if (s > 0) { const o = get(p.cliente); o.proyectos.push({ nombre: p.nombre, saldo: s }); o.saldoP = r2(o.saldoP + s); }
+  });
+  creditos.forEach(c => {
+    if (c.tipo !== 'dado' || !(c.saldo > 0)) return;
+    const o = get(c.nombre); if (o) { o.creditos.push({ desc: c.desc || 'Crédito', saldo: c.saldo, fecha: c.fecha }); o.saldoC = r2(o.saldoC + c.saldo); }
+  });
+  return Object.values(m).map(o => ({ ...o, total: r2(o.saldoP + o.saldoC) })).filter(o => o.total > 0).sort((a, b) => b.total - a.total);
+}
+function mensajeCobro(o) {
+  const E = getEmpresa();
+  const l = ['Hola ' + o.nombre + ', le saludamos de ' + E.nombre + '.', 'Le recordamos que tiene un saldo pendiente de ' + L(o.total) + ':'];
+  o.proyectos.forEach(p => l.push('• Proyecto "' + p.nombre + '": ' + L(p.saldo)));
+  o.creditos.forEach(c => l.push('• ' + c.desc + (c.fecha ? ' (' + c.fecha + ')' : '') + ': ' + L(c.saldo)));
+  l.push('Quedamos atentos para coordinar su pago. ¡Gracias!');
+  return l.join('\n');
+}
+function recordarPago(nombre) {
+  const o = cuentasPorCobrar().find(x => x.nombre.toLowerCase() === String(nombre || '').trim().toLowerCase());
+  if (!o) { toast('Este cliente no tiene saldo pendiente', 'warn'); return false; }
+  let tel = getTelefono(o.nombre);
+  if (!tel) {
+    tel = prompt('WhatsApp de ' + o.nombre + ' (ej. 9999-9999):') || '';
+    if (!tel.trim()) return false;
+    setTelefono(o.nombre, tel.trim());
+  }
+  let d = tel.replace(/\D/g, ''); if (d.length === 8) d = '504' + d;
+  window.open('https://wa.me/' + d + '?text=' + encodeURIComponent(mensajeCobro(o)), '_blank');
+  return true;
+}
+function recordarPagoCredito(id) { const c = creditos.find(x => x.id == id); if (c) recordarPago(c.nombre); }
+function recordarPagoProyecto(id) { const p = proyectos.find(x => x.id == id); if (p) recordarPago(p.cliente); }
+let _cobrosLista = [];
+function abrirCobros() {
+  _cobrosLista = cuentasPorCobrar();
+  const tot = _cobrosLista.reduce((a, o) => a + o.total, 0);
+  document.getElementById('cobros-total').innerHTML = '<div style="background:#2a2208;border:1px solid #5a4a10;border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:.7rem;color:#fbbf24;font-weight:700">' + _cobrosLista.length + ' cliente' + (_cobrosLista.length === 1 ? '' : 's') + ' con saldo</span><span style="font-family:var(--mono);font-size:1rem;color:#fbbf24;font-weight:800">' + L(tot) + '</span></div>';
+  document.getElementById('cobros-lista').innerHTML = _cobrosLista.length ? _cobrosLista.map((o, i) =>
+    '<div style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div style="min-width:0"><div style="font-weight:800;font-size:.78rem;color:var(--text)">' + escH(o.nombre) + '</div>'
+    + '<div style="font-size:.64rem;color:var(--muted);line-height:1.5;margin-top:2px">' + o.proyectos.map(p => '📋 ' + escH(p.nombre) + ': ' + L(p.saldo)).concat(o.creditos.map(c => '💳 ' + escH(c.desc) + ': ' + L(c.saldo))).join('<br>') + '</div></div>'
+    + '<div style="text-align:right;flex-shrink:0"><div style="font-family:var(--mono);font-weight:800;color:var(--amber);font-size:.86rem">' + L(o.total) + '</div>'
+    + '<div style="display:flex;gap:4px;margin-top:5px;justify-content:flex-end"><button onclick="recordarPago(_cobrosLista[' + i + '].nombre)" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:5px;padding:4px 8px;font-size:.64rem;cursor:pointer;font-family:var(--font);font-weight:700">📲 Recordar</button>'
+    + '<button onclick="cerrarCobros();docCliente(_cobrosLista[' + i + '].nombre)" style="background:var(--s2);border:1px solid var(--bd2);color:var(--text2);border-radius:5px;padding:4px 8px;font-size:.64rem;cursor:pointer;font-family:var(--font);font-weight:700">📄 Estado</button></div></div></div></div>').join('')
+    : '<div style="text-align:center;color:var(--green);font-size:.8rem;padding:18px">✅ No hay saldos pendientes por cobrar.</div>';
+  document.getElementById('modal-cobros').classList.add('open');
+}
+function cerrarCobros() { document.getElementById('modal-cobros').classList.remove('open'); }
+
+/* ── Inventario en Google Sheets (mezcla por fecha de modificación) y ligado a la factura ── */
+function invMarcarCambios() {
+  let snap; try { snap = JSON.parse(localStorage.getItem('cr_inv_snap') || 'null'); } catch (e) { snap = null; }
+  const primera = !snap; snap = snap || {};
+  const nuevo = {}, ids = new Set(), ahora = Date.now(); let cambio = false;
+  inventario.forEach(x => {
+    ids.add(x.id);
+    const { mod, ...resto } = x, hx = JSON.stringify(resto);
+    if (!primera && snap[x.id] !== hx) { x.mod = ahora; cambio = true; }      // la primera vez solo se toma la foto, para no pisar datos más nuevos de otro dispositivo
+    nuevo[x.id] = hx;
+  });
+  if (!primera) Object.keys(snap).forEach(id => { if (!ids.has(id)) { invBorrados = invBorrados.filter(b => b.id !== id); invBorrados.push({ id, mod: ahora }); cambio = true; } });
+  localStorage.setItem('cr_inv_snap', JSON.stringify(nuevo));
+  if (cambio) invSyncSoon();
+  return cambio;
+}
+function invMezclar(local, borrados, servidor) {
+  const out = new Map();
+  const considerar = (id, rec) => {
+    const cur = out.get(String(id));
+    if (!cur || (rec.mod || 0) > (cur.mod || 0)) out.set(String(id), cur && !rec.del && !cur.del ? { ...cur, ...rec } : rec);
+  };
+  local.forEach(x => considerar(x.id, { ...x, del: false }));
+  borrados.forEach(b => considerar(b.id, { id: b.id, mod: b.mod, del: true }));
+  (servidor || []).forEach(s => considerar(s.id, s));
+  const activos = [], borr = [];
+  out.forEach(v => { if (v.del) borr.push({ id: v.id, mod: v.mod }); else { const { del, ...x } = v; activos.push(x); } });
+  return { activos, borrados: borr };
+}
+function invGuardarLocal() {
+  localStorage.setItem('cr_inventario', JSON.stringify(inventario)); localStorage.setItem('cr_inv_borrados', JSON.stringify(invBorrados));
+  const snap = {}; inventario.forEach(x => { const { mod, ...resto } = x; snap[x.id] = JSON.stringify(resto); });
+  localStorage.setItem('cr_inv_snap', JSON.stringify(snap));
+}
+let _invTimer = null, _invSincronizando = false;
+function invSyncSoon() { clearTimeout(_invTimer); _invTimer = setTimeout(() => invSincronizar(true), 2000); }
+async function invSincronizar(silencioso) {
+  if (_invSincronizando) return; _invSincronizando = true;
+  try {
+    const res = await (await fetch(GAS_URL + '?action=invLoad', { method: 'GET' })).json();
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Apps Script sin actualizar');
+    const m = invMezclar(inventario, invBorrados, res.items || []);
+    inventario = m.activos; invBorrados = m.borrados; invGuardarLocal();
+    const campos = x => ({ id: x.id, nombre: x.nombre, tipo: x.tipo, qty: x.qty, minstock: x.minstock, estado: x.estado, costo: x.costo, precio: x.precio, cat: x.cat, nota: x.nota, mod: x.mod || 0, del: false });
+    const todos = inventario.map(campos).concat(invBorrados.map(b => ({ id: b.id, mod: b.mod, del: true })));
+    const params = new URLSearchParams(); params.append('action', 'invSync'); params.append('payload', JSON.stringify(todos));
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+    try { invRender(); } catch (e) {}
+    const inf = document.getElementById('inv-sync-info'); if (inf) inf.textContent = '☁️ Sincronizado ' + new Date().toLocaleTimeString('es-HN', { hour: '2-digit', minute: '2-digit' });
+    if (!silencioso) toast('📦 Inventario sincronizado con Google Sheets ✓');
+  } catch (e) { if (!silencioso) toast('No se pudo sincronizar el inventario: ' + e.message, 'err'); }
+  finally { _invSincronizando = false; }
+}
+function refrescarListaInv() {
+  const dl = document.getElementById('lista-inv'); if (!dl) return;
+  dl.innerHTML = inventario.filter(x => x.tipo === 'material').map(x => '<option value="' + escH(x.nombre) + '">' + escH('Stock ' + (x.qty || 0) + (x.precio > 0 ? ' · L ' + fmt(x.precio) : '')) + '</option>').join('');
+}
+function invHint(it) {
+  if (!it.inv) return '';
+  const x = inventario.find(v => v.id === it.inv); if (!x) return '';
+  const falta = (parseFloat(it.c) || 0) > (x.qty || 0);
+  return '<div style="font-size:.62rem;margin-top:4px;color:' + (falta ? 'var(--red)' : 'var(--green)') + '">📦 En inventario · Stock: ' + (x.qty || 0) + (falta ? ' — no alcanza para esta cantidad' : '') + '</div>';
+}
+function detElegirInv(i, nombre) {
+  if (!_det || !_det.items[i]) return;
+  const it = _det.items[i], n = String(nombre || '').trim().toLowerCase();
+  const x = inventario.find(v => v.tipo === 'material' && String(v.nombre || '').trim().toLowerCase() === n);
+  if (x) {
+    it.inv = x.id; it.d = x.nombre;
+    if (((parseFloat(it.p) || 0) === 0 || it.pAuto) && x.precio > 0) { it.p = x.precio; it.pAuto = true; }      // trae el precio de venta del inventario
+    if (_det.descInv === undefined) _det.descInv = true;
+  } else { delete it.inv; delete it.pAuto; }
+  detRenderItems(); detActualizar();
+}
+/* Descuenta (o devuelve) del inventario la diferencia entre lo que pide el detalle y lo ya descontado antes */
+function aplicarInventarioRegistro(regId, devolverTodo) {
+  const det = getDetalleGuardado(regId); if (!det) return [];
+  const deseado = {};
+  if (!devolverTodo && det.on && det.descInv !== false) (det.items || []).forEach(it => { if (it.inv) deseado[it.inv] = Math.round(((deseado[it.inv] || 0) + (parseFloat(it.c) || 0)) * 1000) / 1000; });
+  const aplicado = det.invAplicado || {}, cambios = [];
+  new Set([...Object.keys(deseado), ...Object.keys(aplicado)]).forEach(id => {
+    const delta = Math.round(((deseado[id] || 0) - (aplicado[id] || 0)) * 1000) / 1000;
+    if (Math.abs(delta) < 1e-9) return;
+    const x = inventario.find(v => v.id === id); if (!x) return;
+    x.qty = Math.round(((x.qty || 0) - delta) * 1000) / 1000;
+    cambios.push({ nombre: x.nombre, delta, qty: x.qty, min: x.minstock });
+  });
+  if (JSON.stringify(aplicado) !== JSON.stringify(deseado)) { det.invAplicado = deseado; setDetalleGuardado(regId, det); }
+  if (cambios.length) { invSave(); try { invRender(); } catch (e) {} }
+  return cambios;
+}
+function avisarInventario(cambios) {
+  if (!cambios || !cambios.length) return;
+  toast('📦 Inventario: ' + cambios.map(c => c.nombre + ' ' + (c.delta > 0 ? '−' : '+') + Math.abs(c.delta)).join(', '));
+  cambios.filter(c => c.delta > 0 && c.qty <= (c.min || 1)).forEach(c => toast('⚠ Stock bajo: ' + c.nombre + ' quedó en ' + c.qty, 'warn'));
+}
+
+/* ═══════════════════════════════════════════════════════
+   PLANILLA — empleados, planillas por período y boletas de pago (sin límite de empleados)
+   ═══════════════════════════════════════════════════════ */
+function getEmpleados() { try { return JSON.parse(localStorage.getItem('cr_empleados') || '[]'); } catch (e) { return []; } }
+function setEmpleados(a) { try { localStorage.setItem('cr_empleados', JSON.stringify(a)); } catch (e) { toast('No hay espacio para guardar en este dispositivo', 'err'); } planillaSyncSoon(); }
+function getPlanillas() { try { return JSON.parse(localStorage.getItem('cr_planillas') || '[]'); } catch (e) { return []; } }
+function setPlanillas(a) { try { localStorage.setItem('cr_planillas', JSON.stringify(a)); } catch (e) { toast('No hay espacio para guardar en este dispositivo', 'err'); } planillaSyncSoon(); }
+function idUnico(pref) { return pref + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+const plR2 = x => Math.round((x + Number.EPSILON) * 100) / 100;
+const plN = v => { const x = parseFloat(v); return isNaN(x) ? 0 : x; };
+function fechaIsoHN(s) { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(s || ''); }
+function calcularLineaPlanilla(l) {
+  const heMonto = plR2(plN(l.heHoras) * plN(l.heValor));
+  const totalPerc = plR2(plN(l.salario) + heMonto + plN(l.bonos) + plN(l.otrasPerc));
+  const totalDed = plR2(plN(l.ihss) + plN(l.rap) + plN(l.isr) + plN(l.prestamo) + plN(l.otrasDed));
+  return { heMonto, totalPerc, totalDed, neto: plR2(totalPerc - totalDed) };
+}
+function deduccionesSegunEmpleado(e, devengado) {
+  const baseIhss = plN(e.ihssTecho) > 0 ? Math.min(devengado, plN(e.ihssTecho)) : devengado;
+  return { ihss: plR2(baseIhss * plN(e.ihssPct) / 100), rap: plR2(devengado * plN(e.rapPct) / 100) };
+}
+function lineaPorDefecto(e) {
+  const d = deduccionesSegunEmpleado(e, plN(e.salario));
+  return { empId: e.id, nombre: e.nombre, identidad: e.identidad || '', cargo: e.cargo || '', salario: plN(e.salario), heHoras: '', heValor: '', bonos: '', otrasPerc: '', ihss: d.ihss, rap: d.rap, isr: plN(e.isr), prestamo: plN(e.prestamo), otrasDed: '' };
+}
+function totalesPlanilla(lineas) {
+  const t = { n: lineas.length, perc: 0, ded: 0, neto: 0 };
+  lineas.forEach(l => { const c = calcularLineaPlanilla(l); t.perc = plR2(t.perc + c.totalPerc); t.ded = plR2(t.ded + c.totalDed); t.neto = plR2(t.neto + c.neto); });
+  return t;
+}
+const MESES_PL = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+/* ── Pantalla principal ── */
+function renderPlanilla() {
+  const emps = getEmpleados(), pls = getPlanillas();
+  const act = emps.filter(e => e.activo !== false);
+  const card = (t, v, c) => '<div style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:9px 11px;text-align:center"><div style="font-size:.56rem;color:var(--muted);font-weight:700;text-transform:uppercase;margin-bottom:3px">' + t + '</div><div style="font-family:var(--mono);font-size:.95rem;font-weight:700;color:' + (c || 'var(--text)') + '">' + v + '</div></div>';
+  const ult = pls[0];
+  document.getElementById('pl-resumen').innerHTML = card('Empleados activos', act.length) + card('Por pagar cada período', L(act.reduce((a, e) => a + plN(e.salario), 0)), 'var(--amber)') + card('Última planilla', ult ? L(totalesPlanilla(ult.lineas).neto) : '—', 'var(--green)');
+  document.getElementById('pl-empleados').innerHTML = emps.length ? emps.map(e => '<div style="background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:9px 12px;display:flex;justify-content:space-between;gap:8px;align-items:center;' + (e.activo === false ? 'opacity:.55' : '') + '"><div style="min-width:0"><div style="font-weight:800;font-size:.8rem;color:var(--text)">' + escH(e.nombre) + (e.activo === false ? ' <span style="font-size:.6rem;color:var(--muted)">(inactivo)</span>' : '') + '</div><div style="font-size:.64rem;color:var(--muted)">' + escH(e.cargo || 'Sin cargo') + ' · ' + escH(e.periodicidad || 'mensual') + ' · ' + L(e.salario) + '</div></div><div style="display:flex;gap:5px;flex-shrink:0"><button onclick="abrirEmpleado(\'' + e.id + '\')" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer">✏️</button><button onclick="eliminarEmpleado(\'' + e.id + '\')" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer">🗑️</button></div></div>').join('')
+    : '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:16px">Todavía no hay empleados. Agregue el primero con "➕ Empleado" (no hay límite).</div>';
+  document.getElementById('pl-historial').innerHTML = pls.length ? pls.map(p => { const t = totalesPlanilla(p.lineas), pag = p.estado === 'pagada';
+    return '<div style="background:var(--s2);border:1px solid var(--bd2);border-radius:8px;padding:9px 12px"><div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><div><div style="font-weight:800;font-size:.8rem;color:var(--text)">' + escH(p.periodo) + ' <span style="font-size:.6rem;background:' + (pag ? 'var(--grn-bg)' : 'var(--amb-bg)') + ';color:' + (pag ? 'var(--green)' : 'var(--amber)') + ';padding:1px 8px;border-radius:10px;font-weight:700">' + (pag ? '✅ Pagada' : '📝 Borrador') + '</span></div><div style="font-size:.64rem;color:var(--muted)">' + t.n + ' empleado' + (t.n === 1 ? '' : 's') + ' · ' + fechaIsoHN(p.desde) + ' al ' + fechaIsoHN(p.hasta) + '</div></div><div style="display:flex;align-items:center;gap:6px"><span style="font-family:var(--mono);font-weight:800;color:var(--green)">' + L(t.neto) + '</span><button onclick="abrirPlanilla(\'' + p.id + '\')" style="background:var(--blue-bg);border:1px solid var(--bd2);color:var(--blue);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer">✏️ Abrir</button><button onclick="eliminarPlanilla(\'' + p.id + '\')" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:5px;padding:4px 9px;font-size:.66rem;cursor:pointer">🗑️</button></div></div></div>'; }).join('')
+    : '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:16px">Todavía no hay planillas. Cree la primera con "🧾 Nueva planilla".</div>';
+}
+
+/* ── Empleados ── */
+function abrirEmpleado(id) {
+  const e = id ? getEmpleados().find(x => x.id === id) : null;
+  document.getElementById('empl-titulo').textContent = e ? 'Editar empleado' : 'Nuevo empleado';
+  const set = (k, v) => { document.getElementById('empl-' + k).value = v == null ? '' : v; };
+  set('id', e ? e.id : ''); set('nombre', e ? e.nombre : ''); set('identidad', e ? e.identidad : ''); set('cargo', e ? e.cargo : ''); set('tel', e ? e.tel : '');
+  set('ingreso', e ? e.ingreso : ''); set('period', e ? e.periodicidad : 'mensual'); set('salario', e ? e.salario : ''); set('ihss', e ? e.ihssPct : ''); set('techo', e ? e.ihssTecho : '');
+  set('rap', e ? e.rapPct : ''); set('isr', e ? e.isr : ''); set('prestamo', e ? e.prestamo : '');
+  document.getElementById('empl-activo').checked = e ? e.activo !== false : true;
+  document.getElementById('modal-empleado').classList.add('open');
+}
+function cerrarEmpleado() { document.getElementById('modal-empleado').classList.remove('open'); }
+function guardarEmpleado() {
+  const v = k => document.getElementById('empl-' + k).value;
+  const nombre = v('nombre').trim(), salario = plN(v('salario'));
+  if (!nombre) { toast('Escriba el nombre del empleado', 'err'); return; }
+  if (salario <= 0) { toast('Escriba el salario por período', 'err'); return; }
+  const emp = { id: v('id') || idUnico('emp'), nombre, identidad: v('identidad').trim(), cargo: v('cargo').trim(), tel: v('tel').trim(), ingreso: v('ingreso'), periodicidad: v('period') || 'mensual', salario,
+    ihssPct: plN(v('ihss')), ihssTecho: plN(v('techo')), rapPct: plN(v('rap')), isr: plN(v('isr')), prestamo: plN(v('prestamo')), activo: document.getElementById('empl-activo').checked };
+  const arr = getEmpleados(), i = arr.findIndex(x => x.id === emp.id);
+  if (i > -1) arr[i] = emp; else arr.push(emp);
+  setEmpleados(arr); if (emp.tel) setTelefono(emp.nombre, emp.tel);
+  cerrarEmpleado(); renderPlanilla(); toast('Empleado guardado ✓');
+}
+function eliminarEmpleado(id) {
+  const e = getEmpleados().find(x => x.id === id); if (!e) return;
+  if (!confirm('¿Eliminar a "' + e.nombre + '"?\n\nLas planillas y boletas ya hechas se conservan. Si solo dejó de trabajar, es mejor desmarcar "Empleado activo".')) return;
+  setEmpleados(getEmpleados().filter(x => x.id !== id)); renderPlanilla(); toast('Empleado eliminado', 'err');
+}
+
+/* ── Planilla (ventana de trabajo) ── */
+let _pl = null;
+function plLineasNuevas(filtro) { return getEmpleados().filter(e => e.activo !== false && (!filtro || filtro === 'todos' || (e.periodicidad || 'mensual') === filtro)).map(lineaPorDefecto); }
+function nuevaPlanilla() {
+  if (!getEmpleados().some(e => e.activo !== false)) { toast('Primero agregue al menos un empleado activo', 'err'); return; }
+  const hoy = new Date(), y = hoy.getFullYear(), m = hoy.getMonth(), pad = n => String(n).padStart(2, '0');
+  _pl = { id: idUnico('pl'), periodo: MESES_PL[m] + ' ' + y, desde: y + '-' + pad(m + 1) + '-01', hasta: y + '-' + pad(m + 1) + '-' + pad(new Date(y, m + 1, 0).getDate()), fechaPago: hoyKey(), estado: 'borrador', pagoRegId: '', lineas: plLineasNuevas('todos') };
+  plAbrirVentana(true);
+}
+function abrirPlanilla(id) { const p = getPlanillas().find(x => x.id === id); if (!p) return; _pl = JSON.parse(JSON.stringify(p)); plAbrirVentana(false); }
+function plAbrirVentana(esNueva) {
+  document.getElementById('pl-titulo').textContent = esNueva ? 'Nueva planilla' : 'Planilla ' + _pl.periodo;
+  document.getElementById('pl-periodo').value = _pl.periodo; document.getElementById('pl-desde').value = _pl.desde; document.getElementById('pl-hasta').value = _pl.hasta; document.getElementById('pl-fecha-pago').value = _pl.fechaPago;
+  document.getElementById('pl-filtro-box').style.display = esNueva ? 'flex' : 'none'; document.getElementById('pl-filtro').value = 'todos';
+  const b = document.getElementById('pl-banco'), ref = document.getElementById('inv-use-banco'); if (b && ref && !b.innerHTML) b.innerHTML = ref.innerHTML;
+  plRenderLineas(); plRefrescarSelectorEmpleados(); plActualizarTotales();
+  document.getElementById('modal-planilla').classList.add('open');
+}
+function cerrarPlanilla() { document.getElementById('modal-planilla').classList.remove('open'); }
+function plRegenerar() {
+  if (!_pl || _pl.pagoRegId) return;
+  if (_pl.lineas.length && !confirm('Se volverá a armar la lista de empleados y se perderán los cambios que haya hecho en esta planilla. ¿Continuar?')) { document.getElementById('pl-filtro').value = 'todos'; return; }
+  _pl.lineas = plLineasNuevas(document.getElementById('pl-filtro').value); plRenderLineas(); plRefrescarSelectorEmpleados(); plActualizarTotales();
+}
+function plRefrescarSelectorEmpleados() {
+  const usados = new Set(_pl.lineas.map(l => l.empId)), libres = getEmpleados().filter(e => !usados.has(e.id));
+  document.getElementById('pl-add-emp').innerHTML = libres.length ? libres.map(e => '<option value="' + escH(e.id) + '">' + escH(e.nombre) + (e.activo === false ? ' (inactivo)' : '') + '</option>').join('') : '<option value="">Todos los empleados ya están en la planilla</option>';
+}
+function plAgregarEmpleado() {
+  const id = document.getElementById('pl-add-emp').value, e = getEmpleados().find(x => x.id === id); if (!e) return;
+  _pl.lineas.push(lineaPorDefecto(e)); plRenderLineas(); plRefrescarSelectorEmpleados(); plActualizarTotales();
+}
+function plQuitarLinea(i) { _pl.lineas.splice(i, 1); plRenderLineas(); plRefrescarSelectorEmpleados(); plActualizarTotales(); }
+function plRenderLineas() {
+  const campo = (i, k, t, v) => '<label style="display:flex;flex-direction:column;gap:2px;font-size:.56rem;color:var(--muted);font-weight:700"><span>' + t + '</span><input type="number" class="pi" step="0.01" min="0" value="' + escH(v === 0 ? 0 : (v || '')) + '" oninput="plEdit(' + i + ',\'' + k + '\',this.value)" style="margin:0;font-size:.74rem;min-width:0"></label>';
+  document.getElementById('pl-lineas').innerHTML = _pl.lineas.length ? _pl.lineas.map((l, i) => '<details ' + (_pl.lineas.length <= 3 ? 'open' : '') + ' style="background:var(--s3);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:6px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;list-style:none;align-items:center"><span style="font-size:.78rem;font-weight:800;color:var(--text)">' + escH(l.nombre) + ' <span style="font-size:.6rem;color:var(--muted);font-weight:600">' + escH(l.cargo || '') + '</span></span><span id="pl-neto-' + i + '" style="font-family:var(--mono);font-weight:800;color:var(--green);font-size:.8rem"></span></summary>'
+    + '<div style="font-size:.58rem;color:var(--blue);font-weight:800;text-transform:uppercase;margin:8px 0 4px">Percepciones</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px">' + campo(i, 'salario', 'Salario', l.salario) + campo(i, 'heHoras', 'Horas extra', l.heHoras) + campo(i, 'heValor', 'Valor por hora extra', l.heValor) + campo(i, 'bonos', 'Bonos / comisiones', l.bonos) + campo(i, 'otrasPerc', 'Otras percepciones', l.otrasPerc) + '</div>'
+    + '<div style="font-size:.58rem;color:var(--red);font-weight:800;text-transform:uppercase;margin:8px 0 4px;display:flex;justify-content:space-between;align-items:center"><span>Deducciones</span><button type="button" onclick="plRecalcDed(' + i + ')" title="Recalcular IHSS y RAP con los porcentajes del empleado" style="background:none;border:1px solid var(--bd2);color:var(--text2);border-radius:5px;padding:2px 7px;font-size:.58rem;cursor:pointer;font-family:var(--font)">↻ IHSS y RAP</button></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px">' + campo(i, 'ihss', 'IHSS', l.ihss) + campo(i, 'rap', 'RAP', l.rap) + campo(i, 'isr', 'ISR', l.isr) + campo(i, 'prestamo', 'Préstamos / adelantos', l.prestamo) + campo(i, 'otrasDed', 'Otras deducciones', l.otrasDed) + '</div>'
+    + '<div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end"><button type="button" onclick="docBoletaLinea(' + i + ')" style="background:#0d2a1c;border:1px solid #14532d;color:#4ade80;border-radius:6px;padding:5px 10px;font-size:.66rem;cursor:pointer;font-family:var(--font);font-weight:700">🧾 Boleta de pago</button><button type="button" onclick="plQuitarLinea(' + i + ')" style="background:var(--red-bg);border:1px solid #3d0a0a;color:var(--red);border-radius:6px;padding:5px 10px;font-size:.66rem;cursor:pointer;font-family:var(--font);font-weight:700">✕ Quitar</button></div></details>').join('')
+    : '<div style="text-align:center;color:var(--muted);font-size:.76rem;padding:14px">No hay empleados en esta planilla.</div>';
+  _pl.lineas.forEach((l, i) => { const el = document.getElementById('pl-neto-' + i); if (el) el.textContent = L(calcularLineaPlanilla(l).neto); });
+}
+function plEdit(i, k, v) {
+  if (!_pl || !_pl.lineas[i]) return; _pl.lineas[i][k] = v;
+  const el = document.getElementById('pl-neto-' + i); if (el) { const n = calcularLineaPlanilla(_pl.lineas[i]).neto; el.textContent = L(n); el.style.color = n < 0 ? 'var(--red)' : 'var(--green)'; }
+  plActualizarTotales();
+}
+function plRecalcDed(i) {
+  const l = _pl.lineas[i], e = getEmpleados().find(x => x.id === l.empId);
+  if (!e) { toast('Ese empleado ya no está en la lista; escriba los montos a mano', 'warn'); return; }
+  const dev = plR2(plN(l.salario) + calcularLineaPlanilla(l).heMonto + plN(l.bonos)), d = deduccionesSegunEmpleado(e, dev);
+  l.ihss = d.ihss; l.rap = d.rap; plRenderLineas(); plActualizarTotales(); toast('IHSS y RAP recalculados sobre L ' + fmt(dev));
+}
+function plActualizarTotales() {
+  const t = totalesPlanilla(_pl.lineas), neg = _pl.lineas.filter(l => calcularLineaPlanilla(l).neto < 0).length;
+  document.getElementById('pl-totales').innerHTML = 'Empleados: <strong>' + t.n + '</strong><br>Percepciones: ' + L(t.perc) + '<br>Deducciones: ' + L(t.ded) + '<br><span style="color:var(--green);font-weight:800;font-size:.9rem">NETO A PAGAR: ' + L(t.neto) + '</span>' + (neg ? '<br><span style="color:var(--red)">⚠ ' + neg + ' empleado' + (neg > 1 ? 's' : '') + ' con neto negativo: revise las deducciones.</span>' : '');
+  const pag = !!_pl.pagoRegId; document.getElementById('pl-btn-pagar').disabled = pag; document.getElementById('pl-btn-pagar').style.opacity = pag ? .5 : 1;
+  document.getElementById('pl-pagada-info').textContent = pag ? '✅ Pago ya registrado en Cajas como egreso de Nómina.' : '';
+}
+function guardarPlanilla(silencioso) {
+  if (!_pl) return false;
+  _pl.periodo = document.getElementById('pl-periodo').value.trim(); _pl.desde = document.getElementById('pl-desde').value; _pl.hasta = document.getElementById('pl-hasta').value; _pl.fechaPago = document.getElementById('pl-fecha-pago').value;
+  if (!_pl.periodo) { toast('Escriba el nombre del período', 'err'); return false; }
+  if (!_pl.lineas.length) { toast('La planilla no tiene empleados', 'err'); return false; }
+  const arr = getPlanillas(), copia = JSON.parse(JSON.stringify(_pl)), i = arr.findIndex(x => x.id === copia.id);
+  if (i > -1) arr[i] = copia; else arr.unshift(copia);
+  setPlanillas(arr); renderPlanilla(); if (!silencioso) toast('Planilla guardada ✓'); return true;
+}
+function eliminarPlanilla(id) {
+  const p = getPlanillas().find(x => x.id === id); if (!p) return;
+  if (!confirm('¿Eliminar la planilla "' + p.periodo + '"?' + (p.pagoRegId ? '\n\nEl egreso que se registró en Cajas NO se elimina.' : ''))) return;
+  setPlanillas(getPlanillas().filter(x => x.id !== id)); renderPlanilla(); toast('Planilla eliminada', 'err');
+}
+function pagarPlanilla() {
+  if (!_pl) return;
+  if (_pl.pagoRegId) { toast('Esta planilla ya registró su pago en Cajas', 'warn'); return; }
+  if (!guardarPlanilla(true)) return;
+  const bid = document.getElementById('pl-banco').value, t = totalesPlanilla(_pl.lineas);
+  if (!bid) { toast('Elija la cuenta de donde sale el pago', 'err'); return; }
+  if (t.neto <= 0) { toast('El neto a pagar es L 0.00', 'err'); return; }
+  const inputEl = document.getElementById(bid); if (!inputEl) { toast('No se encontró la cuenta elegida', 'err'); return; }
+  if (!confirm('¿Registrar el pago de la planilla "' + _pl.periodo + '" como un egreso de L ' + fmt(t.neto) + ' en Cajas?\n\nSe restará de la cuenta elegida.')) return;
+  const nuevo = (parseFloat(inputEl.value) || 0) - t.neto; inputEl.value = nuevo.toFixed(2); actualizarColorSaldo(inputEl);
+  if (nuevo < 0) toast('⚠ Sobregiro en cuenta: L ' + fmt(nuevo), 'warn');
+  const now = new Date(), fk = hoyKey(), desc = 'Planilla ' + _pl.periodo;
+  const opt = document.querySelector('#pl-banco option[value="' + bid + '"]');
+  const reg = { id: Date.now(), fecha: fechaHN(now), fechaKey: fk, hora: horaHN(now), desc, neto: t.neto, bruto: t.neto, comision: 0, diezmo: 0, categoria: 'Nómina', cliente: '', pagado: 'Sí', bancoId: bid, bancoNombre: (opt && opt.textContent) || bid, tipo: 'OUT' };
+  registros.unshift(reg); enviarAGoogleSheets(reg);
+  if (!sData[fk]) sData[fk] = { f: [], p: [], t: [] };
+  sData[fk].f.push({ v: t.neto, d: desc, t: 'out', fromCaja: true });
+  actualizarLog(); calcular();
+  _pl.pagoRegId = reg.id; _pl.estado = 'pagada'; guardarPlanilla(true); saveAll(); plActualizarTotales();
+  toast('Egreso de Nómina registrado: L ' + fmt(t.neto));
+}
+
+/* ── Boleta de pago (PDF / WhatsApp) ── */
+function docBoletaLinea(i) { if (_pl && _pl.lineas[i]) abrirDocBoleta(_pl, _pl.lineas[i]); }
+function abrirDocBoleta(pl, l) {
+  const E = getEmpresa(), c = calcularLineaPlanilla(l), emp = getEmpleados().find(x => x.id === l.empId);
+  if (emp && emp.tel) setTelefono(l.nombre, emp.tel);
+  const per = (pl.desde ? fechaIsoHN(pl.desde) + ' al ' + fechaIsoHN(pl.hasta) : pl.periodo), fp = fechaIsoHN(pl.fechaPago);
+  const fc = n => Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
+  abrirDoc({
+    titulo: 'Boleta de pago', nombre: l.nombre, _sinCliente: true,
+    archivo: 'Boleta_' + String(l.nombre).replace(/[^\w]+/g, '_') + '_' + String(pl.periodo).replace(/[^\w]+/g, '_') + '.pdf',
+    resumen: '<strong>' + escH(l.nombre) + '</strong>' + (l.cargo ? ' · ' + escH(l.cargo) : '') + '<br>Período: ' + escH(pl.periodo) + '<br>Neto a pagar: <strong>' + L(c.neto) + '</strong>',
+    texto: 'Hola ' + l.nombre + ', le comparto su boleta de pago de ' + E.nombre + ' del período ' + pl.periodo + '.\nNeto a pagar: ' + L(c.neto),
+    render: doc => {
+      let y = pdfEncabezado(doc, 'BOLETA DE PAGO', numDoc('BOL', String(l.empId).replace(/\D/g, '') + String(pl.id).replace(/\D/g, '')), fp);
+      y = pdfCampo(doc, y, 'Empleado:', l.nombre);
+      if (l.identidad) y = pdfCampo(doc, y, 'Identidad:', l.identidad);
+      if (l.cargo) y = pdfCampo(doc, y, 'Cargo:', l.cargo);
+      y = pdfCampo(doc, y, 'Período:', per); y = pdfCampo(doc, y, 'Fecha de pago:', fp); y += 3;
+      const perc = [['Salario base', L(plN(l.salario))]];
+      if (c.heMonto > 0) perc.push(['Horas extra' + (plN(l.heHoras) > 0 ? ' (' + fc(plN(l.heHoras)) + ' h × ' + L(plN(l.heValor)) + ')' : ''), L(c.heMonto)]);
+      if (plN(l.bonos) > 0) perc.push(['Bonificaciones / comisiones', L(plN(l.bonos))]);
+      if (plN(l.otrasPerc) > 0) perc.push(['Otras percepciones', L(plN(l.otrasPerc))]);
+      y = pdfTabla(doc, y, [{ t: 'PERCEPCIONES', w: 140 }, { t: 'Monto', w: 40, a: 'right' }], perc);
+      y = pdfTotales(doc, y - 1, [{ t: 'Total percepciones:', v: L(c.totalPerc) }]) + 2;
+      const ded = [['IHSS', plN(l.ihss)], ['RAP', plN(l.rap)], ['Impuesto sobre la renta (ISR)', plN(l.isr)], ['Préstamos / adelantos', plN(l.prestamo)], ['Otras deducciones', plN(l.otrasDed)]].filter(x => x[1] > 0).map(x => [x[0], L(x[1])]);
+      y = pdfTabla(doc, y, [{ t: 'DEDUCCIONES', w: 140 }, { t: 'Monto', w: 40, a: 'right' }], ded.length ? ded : [['Sin deducciones', L(0)]]);
+      y = pdfTotales(doc, y - 1, [{ t: 'Total deducciones:', v: L(c.totalDed) }, { t: 'NETO A PAGAR:', v: L(c.neto), destacar: true }]);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      const letras = doc.splitTextToSize('Son: ' + montoEnLetras(c.neto), 180); doc.text(letras, 15, y); y += letras.length * 5 + 2;
+      pdfFirmas(doc, y, 'Empleador', 'Recibí conforme (empleado)');
+    }
+  });
+}
+
+/* ── Planilla general (PDF horizontal, con tantas páginas como hagan falta) ── */
+async function descargarPlanillaGeneral(pl) {
+  if (!pl || !pl.lineas || !pl.lineas.length) { toast('La planilla no tiene empleados', 'warn'); return; }
+  try {
+    const JsPDF = await cargarJsPDF(), doc = new JsPDF({ unit: 'mm', format: 'a4', orientation: 'landscape' }), E = getEmpresa();
+    const periodo = document.getElementById('pl-periodo') && _pl === pl ? document.getElementById('pl-periodo').value : pl.periodo;
+    const cab = () => { doc.setFillColor(11, 15, 20); doc.rect(0, 0, 297, 24, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.text(E.nombre, 10, 11);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.text('PLANILLA DE PAGOS - ' + String(periodo).toUpperCase() + '   (' + fechaIsoHN(pl.desde) + ' al ' + fechaIsoHN(pl.hasta) + ')   Pago: ' + fechaIsoHN(pl.fechaPago), 10, 18); };
+    const cols = [['No.', 8, 'l'], ['Empleado', 52, 'l'], ['Cargo', 28, 'l'], ['Salario', 22, 'r'], ['H. extra', 18, 'r'], ['Bonos/otras', 20, 'r'], ['Total perc.', 23, 'r'], ['IHSS', 16, 'r'], ['RAP', 16, 'r'], ['ISR', 16, 'r'], ['Prést./otras', 20, 'r'], ['Total ded.', 22, 'r'], ['NETO', 26, 'r']];
+    let y = 34; cab();
+    const cabT = () => { doc.setFillColor(30, 45, 61); doc.rect(10, y - 5, 287 - 10, 7, 'F'); doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(7.5); let x = 10; cols.forEach(c => { doc.text(c[0], c[2] === 'r' ? x + c[1] - 1.5 : x + 1.5, y, { align: c[2] === 'r' ? 'right' : 'left' }); x += c[1]; }); y += 7; };
+    cabT();
+    const fila = (v, neg) => { if (y > 188) { doc.addPage(); cab(); y = 34; cabT(); } doc.setFont('helvetica', neg ? 'bold' : 'normal'); doc.setFontSize(7.5); doc.setTextColor(30, 30, 30); let x = 10; cols.forEach((c, i) => { doc.text(String(v[i]), c[2] === 'r' ? x + c[1] - 1.5 : x + 1.5, y, { align: c[2] === 'r' ? 'right' : 'left', maxWidth: c[1] - 2 }); x += c[1]; }); y += 5.4; };
+    let sum = { sal: 0, he: 0, bo: 0, tp: 0, ihss: 0, rap: 0, isr: 0, pr: 0, td: 0, ne: 0 };
+    pl.lineas.forEach((l, i) => { const c = calcularLineaPlanilla(l), bo = plR2(plN(l.bonos) + plN(l.otrasPerc)), pr = plR2(plN(l.prestamo) + plN(l.otrasDed));
+      sum.sal += plN(l.salario); sum.he += c.heMonto; sum.bo += bo; sum.tp += c.totalPerc; sum.ihss += plN(l.ihss); sum.rap += plN(l.rap); sum.isr += plN(l.isr); sum.pr += pr; sum.td += c.totalDed; sum.ne += c.neto;
+      fila([i + 1, l.nombre, l.cargo || '', fmt(l.salario), fmt(c.heMonto), fmt(bo), fmt(c.totalPerc), fmt(l.ihss), fmt(l.rap), fmt(l.isr), fmt(pr), fmt(c.totalDed), fmt(c.neto)]); });
+    y += 1.5; fila(['', 'TOTALES (' + pl.lineas.length + ')', '', fmt(sum.sal), fmt(sum.he), fmt(sum.bo), fmt(sum.tp), fmt(sum.ihss), fmt(sum.rap), fmt(sum.isr), fmt(sum.pr), fmt(sum.td), fmt(sum.ne)], true);
+    if (y > 170) { doc.addPage(); cab(); y = 40; }
+    y += 20; doc.setDrawColor(90, 100, 110); doc.setLineWidth(0.3); doc.line(25, y, 95, y); doc.line(130, y, 200, y);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 100, 110); doc.text('Elaborado por', 60, y + 5, { align: 'center' }); doc.text('Autorizado por', 165, y + 5, { align: 'center' });
+    doc.save('Planilla_' + String(periodo).replace(/[^\w]+/g, '_') + '.pdf');
+  } catch (e) { console.error(e); toast(e.message || 'No se pudo crear el PDF', 'err'); }
+}
+
+/* ── Envío a Google Sheets (hojas "Empleados" y "Planillas") ── */
+let _plTimer = null;
+function planillaSyncSoon() { clearTimeout(_plTimer); _plTimer = setTimeout(planillaEnviarSheets, 2500); }
+async function planillaEnviarSheets() {
+  try {
+    const emps = getEmpleados(), pls = getPlanillas(); if (!emps.length && !pls.length) return;
+    const lineas = [];
+    pls.forEach(p => p.lineas.forEach(l => { const c = calcularLineaPlanilla(l);
+      lineas.push({ planillaId: p.id, periodo: p.periodo, desde: fechaIsoHN(p.desde), hasta: fechaIsoHN(p.hasta), fechaPago: fechaIsoHN(p.fechaPago), empId: l.empId, nombre: l.nombre, salario: plN(l.salario), heMonto: c.heMonto, bonos: plN(l.bonos), otrasPerc: plN(l.otrasPerc), totalPerc: c.totalPerc, ihss: plN(l.ihss), rap: plN(l.rap), isr: plN(l.isr), prestamo: plN(l.prestamo), otrasDed: plN(l.otrasDed), totalDed: c.totalDed, neto: c.neto, estado: p.estado === 'pagada' ? 'Pagada' : 'Borrador' }); }));
+    const params = new URLSearchParams(); params.append('action', 'planillaSync'); params.append('payload', JSON.stringify({ empleados: emps, lineas }));
+    await fetch(GAS_URL, { method: 'POST', mode: 'no-cors', body: params });
+  } catch (e) { console.warn('Planilla no enviada a Sheets:', e); }
 }
 
 function abrirDoc(d) {
@@ -7045,6 +7889,7 @@ function abrirDoc(d) {
   actualizarSelectorTipoDoc(d);
   refrescarListaClientes();
   actualizarSelectorProyectoDoc(d);
+  { const cb = document.getElementById('doc-cliente-box'); if (cb) cb.style.display = d._sinCliente ? 'none' : 'block'; }
   actualizarEditorDetalle(d);
   actualizarAvisoFacturaEmitida(d);
   const fb = document.getElementById('doc-firma-box');
@@ -7224,7 +8069,9 @@ async function construirPDF() {
   docPendiente._clienteDoc = getDocClienteActual();
   const cf = document.getElementById('doc-con-firma');
   window._pdfConFirma = cf ? cf.checked : true;
+  if (docPendiente._esfactura && docPendiente.registroId) await asegurarFacturaCentral();   // número único en Google Sheets
   docPendiente.render(doc);
+  if (docPendiente.registroId) { try { avisarInventario(aplicarInventarioRegistro(docPendiente.registroId)); } catch (e) { console.warn('Inventario:', e); } }
   pdfPie(doc);
   return doc;
 }
